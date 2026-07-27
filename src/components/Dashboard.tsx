@@ -90,7 +90,7 @@ const VIEW_FILTERS: Partial<Record<View, FilterField[]>> = {
   yield: ["district", "project", "propertyType"],
   sizebands: ["district", "propertyType", "saleType", "marketSegment"],
   comps: ["district", "project", "propertyType", "saleType", "marketSegment", "tenureType", "size", "price"],
-  premium: ["district", "propertyType", "marketSegment", "size"],
+  premium: ["district", "propertyType", "marketSegment", "size", "price"],
 };
 
 // Colorful quick-start shortcuts for the landing view — the questions young
@@ -211,20 +211,23 @@ export default function Dashboard() {
       {/* Main */}
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-[1080px] px-5 pb-24 pt-6">
-          {/* Header with the hand-sketched shophouse banner */}
+          {/* Header — banner sits BEHIND text on desktop, BELOW text on mobile (no overlap) */}
           <header
-            className="relative flex min-h-[150px] flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5"
-            style={{
-              backgroundColor: "#f5e9cf",
-              backgroundImage: "url(/header-banner.jpg)",
-              backgroundSize: "auto 100%",
-              backgroundPosition: "right center",
-              backgroundRepeat: "no-repeat",
-            }}
+            className="relative flex min-h-0 flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5 md:min-h-[150px]"
+            style={{ backgroundColor: "#f5e9cf" }}
           >
-            {/* soft cream wash on the left so the text always stays readable */}
+            {/* desktop-only background artwork + cream wash for legibility */}
             <span
-              className="pointer-events-none absolute inset-0"
+              className="pointer-events-none absolute inset-0 hidden md:block"
+              style={{
+                backgroundImage: "url(/header-banner.jpg)",
+                backgroundSize: "auto 100%",
+                backgroundPosition: "right center",
+                backgroundRepeat: "no-repeat",
+              }}
+            />
+            <span
+              className="pointer-events-none absolute inset-0 hidden md:block"
               style={{ background: "linear-gradient(90deg, #f5e9cf 0%, rgba(245,233,207,0.92) 34%, rgba(245,233,207,0) 62%)" }}
             />
             <div className="relative max-w-[520px]">
@@ -239,7 +242,7 @@ export default function Dashboard() {
                 built by Sharol
               </p>
             </div>
-            <div className="relative flex flex-col items-end gap-2 rounded-xl bg-[#f5e9cf]/90 p-2">
+            <div className="relative flex flex-col items-start gap-2 rounded-xl p-2 md:items-end md:bg-[#f5e9cf]/90">
               {meta && <SourceBadge meta={meta} />}
               <button
                 onClick={refresh}
@@ -249,6 +252,13 @@ export default function Dashboard() {
                 {refreshing ? "Refreshing…" : "Refresh data"}
               </button>
             </div>
+            {/* mobile-only: banner shown below the text, full width, never overlapping */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/header-banner.jpg"
+              alt="Hand-sketched Singapore shophouses"
+              className="relative -mx-1 mt-1 w-full rounded-xl md:hidden"
+            />
           </header>
 
           {/* Quick starts — always visible so the main journeys are one tap away */}
@@ -386,8 +396,9 @@ export default function Dashboard() {
               <b>Disclaimer.</b> This dashboard exists to make publicly available property data more transparent and
               easier to understand. All transaction figures are drawn from Urban Redevelopment Authority (URA) private
               residential caveats, presented as lodged; they may be revised by URA and can lag the market. PSF uses net
-              price where a caveat records one. URA publishes roughly the last 5 years of caveats; this app retains
-              older months as they age out, so its archive grows over time. Calculator outputs use published IRAS/MAS
+              price where a caveat records one. <b>All URA data shown covers up to the last 5 years of transactions</b> —
+              URA does not publish further back; this app retains older months as they age out, so its archive grows
+              over time. Calculator outputs use published IRAS/MAS
               rates current at the time of verification and are estimates only.
             </p>
             <p>

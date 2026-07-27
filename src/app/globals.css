@@ -38,6 +38,10 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   overflow-x: clip; /* nothing should push the page sideways on mobile */
+  /* Stop iOS Safari's automatic text inflation, which enlarges text and
+     pushes layouts wider than the screen (content gets cut off). */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {

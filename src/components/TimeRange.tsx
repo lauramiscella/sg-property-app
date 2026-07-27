@@ -10,7 +10,6 @@ const PRESETS: { label: string; years: number | null }[] = [
   { label: "1Y", years: 1 },
   { label: "3Y", years: 3 },
   { label: "5Y", years: 5 },
-  { label: "All", years: null },
 ];
 
 function shiftMonth(maxMonth: string, yearsBack: number): string {
@@ -29,7 +28,8 @@ export default function TimeRange({
 }) {
   const maxMonth = meta.months?.max;
   const activePreset = (() => {
-    if (!filters.from && !filters.to) return "All";
+    // No explicit window = everything URA serves (~5 years), so 5Y is the default.
+    if (!filters.from && !filters.to) return "5Y";
     if (!maxMonth || filters.to) return null;
     for (const p of PRESETS) {
       if (p.years && filters.from === shiftMonth(maxMonth, p.years)) return p.label;
