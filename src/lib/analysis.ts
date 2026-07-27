@@ -318,6 +318,85 @@ export function districtMomentum(txns: Txn[], maxMonth?: string, windowMonths = 
     .sort((a, b) => (b.momentumPct ?? 0) - (a.momentumPct ?? 0));
 }
 
+// ---- Absorption & sell speed -------------------------------------------------
+// Supply (active listings) comes from the USER — portals have no official API.
+// A duplicate haircut is applied (default 20%), then:
+//   months of supply = effective listings ÷ monthly URA sales rate
+//   approx days on market ≈ months of supply × 30.4
+// Price sensitivity: at asking PSF x, the effective buyer pool is the share of
+// recent deals that transacted at ≥ x psf; the sales rate scales by that share.
+
+export interface AbsorptionPoint {
+  psf: number;
+  poolPct: number; // share of recent deals at or above this psf
+  monthsSupply: number | null;
+  domDays: number | null;
+}
+
+export interface AbsorptionResult {
+  comps: number;
+  windowMonths: number;
+  monthlyRate: number | null; // sales per month
+  medianPsf: number | null;
+  effListings: number;
+  monthsSupply: number | null;
+  domDays: number | null;
+  verdict: "seller" | "balanced" | "buyer" | null;
+  points: AbsorptionPoint[];
+}
+
+export function absorption(
+  txns: Txn[],
+  opts: { listings: number; dedupePct: number; sqft?: number; months?: number; maxMonth?: string }
+): AbsorptionResult {
+  const months = opts.months ?? 12;
+  let cutoff = "0000-00";
+  if (opts.maxMonth) {
+    const [y, m] = opts.maxMonth.split("-").map(Number);
+    const t = y * 12 + (m - 1) - (months - 1);
+    cutoff = `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+  }
+  let comps = txns.filter((t) => !opts.maxMonth || t.month >= cutoff);
+  if (opts.sqft && opts.sqft > 0) {
+    comps = comps.filter((t) => t.areaSqft >= opts.sqft! * 0.85 && t.areaSqft <= opts.sqft! * 1.15);
+  }
+  const effListings = Math.max(0, Math.round(opts.listings * (1 - opts.dedupePct / 100)));
+  const monthlyRate = comps.length > 0 ? comps.length / months : null;
+  const monthsSupply = monthlyRate ? effListings / monthlyRate : null;
+  const domDays = monthsSupply != null ? monthsSupply * 30.4 : null;
+  const verdict =
+    monthsSupply == null ? null : monthsSupply < 4 ? "seller" : monthsSupply <= 6 ? "balanced" : "buyer";
+
+  const psfs = comps.map((t) => t.psf).sort((a, b) => a - b);
+  const points: AbsorptionPoint[] = [];
+  if (psfs.length >= 5 && monthlyRate) {
+    for (let q = 10; q <= 90; q += 10) {
+      const psf = quantile(psfs, q / 100)!;
+      const atOrAbove = psfs.filter((p) => p >= psf).length / psfs.length;
+      const adjRate = monthlyRate * atOrAbove;
+      const ms = adjRate > 0 ? effListings / adjRate : null;
+      points.push({
+        psf: Math.round(psf),
+        poolPct: Math.round(atOrAbove * 100),
+        monthsSupply: ms != null ? Math.round(ms * 10) / 10 : null,
+        domDays: ms != null ? Math.round(ms * 30.4) : null,
+      });
+    }
+  }
+
+  return {
+    comps: comps.length,
+    windowMonths: months,
+    monthlyRate: monthlyRate != null ? Math.round(monthlyRate * 10) / 10 : null,
+    medianPsf: round(median(psfs)),
+    effListings,
+    monthsSupply: monthsSupply != null ? Math.round(monthsSupply * 10) / 10 : null,
+    domDays: domDays != null ? Math.round(domDays) : null,
+    verdict,
+    points,
+  };
+}
+
 // ---- "Am I overpaying?" — valuation percentile check ------------------------
 // Places a proposed price's PSF within the distribution of recent, similar-size
 // comparable caveats. Caller pre-filters by project/district/tenure/type.

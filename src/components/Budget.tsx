@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Meta, BudgetRow } from "@/lib/analysis";
 import { districtLabel, fmtSGD, fmtNum } from "@/lib/format";
-import { Card, Field, TextInput, Kpi, Spinner, Empty } from "./ui";
+import { Card, Field, TextInput, Spinner, Empty } from "./ui";
 
 const RANGE_CHIPS: { label: string; min: number; max: number }[] = [
   { label: "$1M–$1.5M", min: 1_000_000, max: 1_500_000 },
@@ -13,8 +13,18 @@ const RANGE_CHIPS: { label: string; min: number; max: number }[] = [
   { label: "$3M–$4M", min: 3_000_000, max: 4_000_000 },
 ];
 
-// Group URA's raw property types into buyer-friendly categories. "Apartment"
-// is folded into Condo (they overlap in everyday use).
+interface Bucket {
+  rows: BudgetRow[];
+  total: number;
+}
+interface ApiResult {
+  windowMonths: number;
+  resale: Bucket;
+  newSale: Bucket;
+}
+
+// Group URA's raw property types into buyer-friendly categories ("Apartment"
+// is folded into Condo).
 function buildTypeGroups(propertyTypes: string[]) {
   const condo = propertyTypes.filter((t) => /apartment|condominium/i.test(t) && !/executive/i.test(t));
   const ec = propertyTypes.filter((t) => /executive/i.test(t));
@@ -30,8 +40,8 @@ export default function Budget({ meta }: { meta: Meta }) {
   const [minS, setMinS] = useState("1500000");
   const [maxS, setMaxS] = useState("2000000");
   const groups = useMemo(() => buildTypeGroups(meta.propertyTypes), [meta.propertyTypes]);
-  const [checked, setChecked] = useState<string[]>([]); // group ids; empty = all
-  const [data, setData] = useState<{ rows: BudgetRow[]; total: number; windowMonths: number } | null>(null);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [data, setData] = useState<ApiResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const min = Number(minS) || 0;
@@ -42,7 +52,7 @@ export default function Budget({ meta }: { meta: Meta }) {
     setChecked((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
   const typesParam = useMemo(() => {
-    if (!checked.length || checked.length === groups.length) return ""; // all
+    if (!checked.length || checked.length === groups.length) return "";
     return groups
       .filter((g) => checked.includes(g.id))
       .flatMap((g) => g.types)
@@ -69,9 +79,6 @@ export default function Budget({ meta }: { meta: Meta }) {
       clearTimeout(t);
     };
   }, [valid, min, max, typesParam]);
-
-  const rows = data?.rows ?? [];
-  const biggest = rows[0];
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,300px)_1fr]">
@@ -123,60 +130,111 @@ export default function Budget({ meta }: { meta: Meta }) {
         </div>
       </Card>
 
-      <Card
-        title={valid ? `What ${fmtSGD(min)}–${fmtSGD(max)} bought` : "What your budget buys"}
-        subtitle={`Only transactions priced INSIDE this range, last ${data?.windowMonths ?? 24} months, by district.`}
-      >
+      <div className="space-y-5">
         {!valid ? (
-          <Empty>Enter a budget range (from and to) to see real deals inside it.</Empty>
+          <Card title="What your budget buys">
+            <Empty>Enter a budget range (from and to) to see real deals inside it.</Empty>
+          </Card>
         ) : loading && !data ? (
-          <div className="py-16"><Spinner /></div>
-        ) : rows.length === 0 ? (
-          <Empty>No transactions inside this range for the ticked property types in the last 24 months. Widen the range.</Empty>
-        ) : (
+          <Card title="What your budget buys">
+            <div className="py-16"><Spinner /></div>
+          </Card>
+        ) : data ? (
           <>
-            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Kpi label="Districts in range" value={fmtNum(rows.length)} accent="emerald" sub={`${fmtNum(data!.total)} transactions`} />
-              <Kpi label="Most space" value={biggest?.medianSqft ? `${fmtNum(biggest.medianSqft)} sqft` : "—"} accent="amber" sub={biggest ? districtLabel(biggest.district) : ""} />
-              <Kpi label="Median PSF there" value={fmtSGD(biggest?.medianPsf ?? null)} accent="plum" sub="at that district" />
-            </div>
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[620px] text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
-                    <th className="px-3 py-2.5 font-medium">District</th>
-                    <th className="px-3 py-2.5 text-right font-medium">Deals in range</th>
-                    <th className="px-3 py-2.5 text-right font-medium">Median size</th>
-                    <th className="px-3 py-2.5 text-right font-medium">Median price</th>
-                    <th className="px-3 py-2.5 font-medium">Where it happened</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.district} className="border-b border-line/60 last:border-0 hover:bg-card-2">
-                      <td className="px-3 py-2.5 font-medium text-ink">{districtLabel(r.district)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.count)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-emerald">{r.medianSqft ? `${fmtNum(r.medianSqft)} sqft` : "—"}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPrice)}</td>
-                      <td className="px-3 py-2.5 text-xs text-muted">
-                        {r.topProjects.map((p) => `${p.name} (${p.count})`).join(" · ")}
-                        {r.totalProjects > r.topProjects.length && (
-                          <span className="text-amber"> +{r.totalProjects - r.topProjects.length} more projects</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-xs text-muted">
-              Every figure comes only from caveats priced between {fmtSGD(min)} and {fmtSGD(max)} — nothing outside
-              the range is counted. &ldquo;Where it happened&rdquo; lists the 5 most active projects; the +N covers the
-              rest. Real lodged deals, not listings.
+            <BudgetTable
+              tag="RESALE"
+              tagColor="var(--color-emerald)"
+              bucket={data.resale}
+              min={min}
+              max={max}
+              windowMonths={data.windowMonths}
+              note="Completed homes changing hands (includes sub-sales). Move-in ready."
+            />
+            <BudgetTable
+              tag="NEW SALES"
+              tagColor="var(--color-plum)"
+              bucket={data.newSale}
+              min={min}
+              max={max}
+              windowMonths={data.windowMonths}
+              note="Bought directly from developers — usually still building, progressive payments."
+            />
+            <p className="text-xs text-muted">
+              Every figure comes only from caveats priced between {fmtSGD(min)} and {fmtSGD(max)} — real lodged
+              deals, not listings. &ldquo;Where it happened&rdquo; lists the 5 most active projects; +N covers the rest.
             </p>
           </>
-        )}
-      </Card>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function BudgetTable({
+  tag,
+  tagColor,
+  bucket,
+  min,
+  max,
+  windowMonths,
+  note,
+}: {
+  tag: string;
+  tagColor: string;
+  bucket: Bucket;
+  min: number;
+  max: number;
+  windowMonths: number;
+  note: string;
+}) {
+  return (
+    <Card
+      title={`What ${fmtSGD(min)}–${fmtSGD(max)} bought`}
+      subtitle={note}
+      right={
+        <span
+          className="rounded-full px-3 py-1 text-[11px] font-extrabold tracking-wide text-white"
+          style={{ background: tagColor }}
+        >
+          {tag} · {fmtNum(bucket.total)} deals
+        </span>
+      }
+    >
+      {bucket.rows.length === 0 ? (
+        <Empty>No {tag.toLowerCase()} transactions inside this range in the last {windowMonths} months.</Empty>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-line">
+          <table className="w-full min-w-[620px] text-sm">
+            <thead>
+              <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
+                <th className="px-3 py-2.5 font-medium">District</th>
+                <th className="px-3 py-2.5 text-right font-medium">Deals</th>
+                <th className="px-3 py-2.5 text-right font-medium">Median size</th>
+                <th className="px-3 py-2.5 text-right font-medium">Median price</th>
+                <th className="px-3 py-2.5 font-medium">Where it happened</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bucket.rows.map((r) => (
+                <tr key={r.district} className="border-b border-line/60 last:border-0 hover:bg-card-2">
+                  <td className="px-3 py-2.5 font-medium text-ink">{districtLabel(r.district)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.count)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-emerald">
+                    {r.medianSqft ? `${fmtNum(r.medianSqft)} sqft` : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPrice)}</td>
+                  <td className="px-3 py-2.5 text-xs text-muted">
+                    {r.topProjects.map((p) => `${p.name} (${p.count})`).join(" · ")}
+                    {r.totalProjects > r.topProjects.length && (
+                      <span className="text-amber"> +{r.totalProjects - r.topProjects.length} more</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

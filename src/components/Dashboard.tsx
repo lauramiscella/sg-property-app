@@ -16,13 +16,14 @@ import TenurePremium from "./TenurePremium";
 import SizeBands from "./SizeBands";
 import Budget from "./Budget";
 import Momentum from "./Momentum";
+import Absorption from "./Absorption";
 import { Spinner } from "./ui";
 
 type View =
   | "psf" | "momentum" | "tenure"
   | "appreciation" | "yield" | "sizebands" | "comps"
   | "premium"
-  | "value" | "budget"
+  | "value" | "budget" | "absorption"
   | "calc";
 
 interface Group {
@@ -68,6 +69,7 @@ const GROUPS: Group[] = [
     views: [
       { id: "value", label: "Price Check", hint: "Is that asking price fair? See where it sits among recent comparable sales" },
       { id: "budget", label: "Budget Explorer", hint: "What can I get for $X? Real deals at your budget, district by district" },
+      { id: "absorption", label: "Sell Speed", hint: "How fast will it sell? Supply vs URA sales pace, and how price changes the wait" },
     ],
   },
   {
@@ -79,7 +81,7 @@ const GROUPS: Group[] = [
   },
 ];
 
-const NO_FILTER_VIEWS: View[] = ["calc", "value", "budget"];
+const NO_FILTER_VIEWS: View[] = ["calc", "value", "budget", "absorption"];
 
 // Only the filters that make sense for each view — everything else is hidden.
 const VIEW_FILTERS: Partial<Record<View, FilterField[]>> = {
@@ -383,6 +385,8 @@ export default function Dashboard() {
               <ValueCheck meta={meta} />
             ) : v === "budget" ? (
               <Budget meta={meta} />
+            ) : v === "absorption" ? (
+              <Absorption meta={meta} />
             ) : (
               <Calculator />
             )}
