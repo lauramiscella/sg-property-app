@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { TxnFilter } from "@/lib/types";
 import { MomentumRow } from "@/lib/analysis";
 import { toQuery } from "@/lib/query";
 import { useApi } from "@/lib/useApi";
 import { fmtSGD, fmtNum, fmtPct, districtLabel, dShort } from "@/lib/format";
-import { Card, Spinner, Empty, Kpi } from "./ui";
+import { Card, Spinner, Empty, Kpi, Segmented } from "./ui";
 
 export default function Momentum({ filters }: { filters: TxnFilter }) {
-  const url = `/api/momentum${toQuery(filters)}`;
+  const [window, setWindow] = useState<"12" | "6" | "1">("12");
+  const url = `/api/momentum${toQuery(filters, { window })}`;
   const { data, loading } = useApi<{ rows: MomentumRow[] }>(url);
+  const wLabel = window === "12" ? "12 months" : window === "6" ? "6 months" : "month";
   const rows = data?.rows ?? [];
   const chartData = rows.map((r) => ({ name: dShort(r.district), mom: r.momentumPct ?? 0 }));
   const hottest = rows[0];
@@ -18,8 +21,19 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
 
   return (
     <Card
-      title="District momentum"
-      subtitle="Median PSF, last 12 months vs the 12 months before — which districts are heating up or cooling."
+      title="District momentum — price movement, not volume"
+      subtitle={`How each district's PRICE (median $PSF) moved: last ${wLabel} vs the ${wLabel} before. The volume column is context only.`}
+      right={
+        <Segmented<"12" | "6" | "1">
+          value={window}
+          onChange={setWindow}
+          options={[
+            { value: "12", label: "12 months" },
+            { value: "6", label: "6 months" },
+            { value: "1", label: "Last month" },
+          ]}
+        />
+      }
     >
       {loading ? (
         <div className="py-16"><Spinner /></div>
@@ -30,7 +44,7 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Kpi label="Heating fastest" value={fmtPct(hottest?.momentumPct ?? null)} tone="up" accent="emerald" sub={hottest ? districtLabel(hottest.district) : ""} />
             <Kpi label="Coolest" value={fmtPct(coolest?.momentumPct ?? null)} tone={(coolest?.momentumPct ?? 0) < 0 ? "down" : "default"} accent="brick" sub={coolest ? districtLabel(coolest.district) : ""} />
-            <Kpi label="Districts measured" value={fmtNum(rows.length)} accent="gold" sub="≥10 caveats each window" />
+            <Kpi label="Districts measured" value={fmtNum(rows.length)} accent="gold" sub="enough deals in both windows" />
           </div>
           <div className="w-full" style={{ height: Math.max(220, rows.length * 26) }}>
             <ResponsiveContainer>
@@ -75,8 +89,9 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted">
-            Momentum is a mix-sensitive signal — one big launch can move a district&apos;s median. Cross-check a
-            hot district in Market Trends before reading it as a trend.
+            Momentum here means <b>price movement</b> (median $PSF), not how many units sold. Shorter windows react
+            faster but are noisier — one big launch can move a district&apos;s median, so cross-check a hot district
+            in Market Trends before reading it as a trend.
           </p>
         </>
       )}

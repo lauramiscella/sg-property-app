@@ -19,13 +19,14 @@ interface Result {
 }
 
 export default function TenurePremium({ filters }: { filters: TxnFilter }) {
-  const [groupBy, setGroupBy] = useState<GroupBy>("year");
+  const [groupBy, setGroupBy] = useState<GroupBy>("quarter");
   const url = `/api/tenure-premium${toQuery(filters, { groupBy })}`;
   const { data, loading } = useApi<Result>(url);
   const points = data?.points ?? [];
   const cur = data?.currentPremiumPct ?? null;
   const avg = data?.avgPremiumPct ?? null;
   const gap = cur != null && avg != null ? cur - avg : null;
+  const latest = [...points].reverse().find((p) => p.premiumPct != null);
 
   return (
     <Card
@@ -46,10 +47,16 @@ export default function TenurePremium({ filters }: { filters: TxnFilter }) {
       ) : (
         <>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Kpi label="Current FH premium" value={fmtPct(cur)} accent="plum" sub="freehold over leasehold" />
+            <Kpi label="Current FH premium" value={fmtPct(cur)} accent="plum" sub={latest ? `${latest.period} median` : "freehold over leasehold"} />
             <Kpi label="Historical average" value={fmtPct(avg)} accent="amber" sub="across the window" />
-            <Kpi label="Latest freehold PSF" value={fmtSGD(data?.latestFhPsf ?? null)} accent="brick" />
-            <Kpi label="Latest leasehold PSF" value={fmtSGD(data?.latestLhPsf ?? null)} accent="emerald" />
+            <Kpi label="Latest freehold PSF" value={fmtSGD(data?.latestFhPsf ?? null)} accent="brick" sub={latest ? `${latest.period} median · ${fmtNum(latest.fhVol)} deals` : ""} />
+            <Kpi label="Latest leasehold PSF" value={fmtSGD(data?.latestLhPsf ?? null)} accent="emerald" sub={latest ? `${latest.period} median · ${fmtNum(latest.lhVol)} deals` : ""} />
+          </div>
+          <div className="mb-4 rounded-lg border border-line bg-card-2 px-3 py-2 text-xs text-ink-soft">
+            <b>How these numbers work:</b> each figure is the <b>median $PSF of every matching caveat</b> in that
+            period — all projects and all unit sizes mixed, not one project&apos;s average. A single launch&apos;s
+            average (say, a project at $2,700 psf) can sit well above the district median, because larger units and
+            other projects pull the median down. Where the deal count is small, treat the figure as indicative only.
           </div>
           {gap != null && (
             <div className={`mb-4 rounded-lg border px-3 py-2 text-xs ${gap > 2 ? "border-emerald/30 bg-emerald/5 text-[#3f7d57]" : gap < -2 ? "border-brick/30 bg-brick/5 text-brick" : "border-line bg-card-2 text-ink-soft"}`}>

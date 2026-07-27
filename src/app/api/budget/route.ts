@@ -5,9 +5,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const ds = await getDataset();
-  const budget = Number(sp.get("budget") || 0);
+  const min = Number(sp.get("min") || 0);
+  const max = Number(sp.get("max") || 0);
   const propertyType = sp.get("propertyType") || undefined;
   return NextResponse.json(
-    budgetExplorer(ds.txns, budget, { months: 24, maxMonth: ds.transactionMonths?.max, propertyType })
+    budgetExplorer(ds.txns, min, max, { months: 24, maxMonth: ds.transactionMonths?.max, propertyType })
   );
 }

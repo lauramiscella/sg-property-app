@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TxnFilter } from "@/lib/types";
 import { Meta } from "@/lib/analysis";
-import FilterBar from "./FilterBar";
+import FilterBar, { FilterField } from "./FilterBar";
 import PsfTrends from "./PsfTrends";
 import Comparables from "./Comparables";
 import RentalYield from "./RentalYield";
@@ -80,6 +80,18 @@ const GROUPS: Group[] = [
 ];
 
 const NO_FILTER_VIEWS: View[] = ["calc", "value", "budget"];
+
+// Only the filters that make sense for each view — everything else is hidden.
+const VIEW_FILTERS: Partial<Record<View, FilterField[]>> = {
+  psf: ["district", "project", "propertyType", "saleType", "marketSegment", "tenureType", "size", "price"],
+  momentum: ["propertyType", "saleType", "marketSegment"],
+  tenure: ["district", "propertyType", "saleType", "marketSegment"],
+  appreciation: ["project"],
+  yield: ["district", "project", "propertyType"],
+  sizebands: ["district", "propertyType", "saleType", "marketSegment"],
+  comps: ["district", "project", "propertyType", "saleType", "marketSegment", "tenureType", "size", "price"],
+  premium: ["district", "propertyType", "marketSegment", "size"],
+};
 
 // Colorful quick-start shortcuts for the landing view — the questions young
 // buyers actually arrive with.
@@ -205,14 +217,51 @@ export default function Dashboard() {
       {/* Main */}
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-[1080px] px-5 pb-24 pt-6">
-          {/* Greeting header with soft pastel blobs */}
+          {/* Greeting header with a pastel city skyline */}
           <header
             className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5"
             style={{ background: "linear-gradient(120deg, #fff8ec 0%, #fbf0dd 55%, #f4e6d0 100%)" }}
           >
-            <span className="pointer-events-none absolute -right-10 -top-14 h-40 w-40 rounded-full" style={{ background: "color-mix(in srgb, var(--color-plum) 12%, transparent)" }} />
-            <span className="pointer-events-none absolute -right-24 top-6 h-32 w-32 rounded-full" style={{ background: "color-mix(in srgb, var(--color-emerald) 12%, transparent)" }} />
-            <span className="pointer-events-none absolute -left-8 -bottom-16 h-36 w-36 rounded-full" style={{ background: "color-mix(in srgb, var(--color-gold) 14%, transparent)" }} />
+            <svg
+              className="pointer-events-none absolute bottom-0 right-0 h-[86px] w-[420px] max-w-[60%]"
+              viewBox="0 0 420 86"
+              preserveAspectRatio="xMaxYMax meet"
+              aria-hidden
+            >
+              {/* back row */}
+              <g opacity="0.35">
+                <rect x="8" y="30" width="34" height="56" rx="3" fill="var(--color-plum)" />
+                <rect x="70" y="18" width="30" height="68" rx="3" fill="var(--color-amber)" />
+                <rect x="150" y="36" width="40" height="50" rx="3" fill="var(--color-emerald)" />
+                <rect x="240" y="24" width="28" height="62" rx="3" fill="var(--color-gold)" />
+                <rect x="330" y="14" width="34" height="72" rx="3" fill="var(--color-clay)" />
+              </g>
+              {/* front row */}
+              <g opacity="0.55">
+                <rect x="36" y="46" width="40" height="40" rx="3" fill="var(--color-emerald)" />
+                <rect x="104" y="40" width="36" height="46" rx="3" fill="var(--color-plum)" />
+                <rect x="190" y="52" width="44" height="34" rx="3" fill="var(--color-amber)" />
+                <rect x="272" y="44" width="38" height="42" rx="3" fill="var(--color-emerald)" />
+                <rect x="368" y="38" width="40" height="48" rx="3" fill="var(--color-gold)" />
+                <polygon points="104,40 122,26 140,40" fill="var(--color-plum)" />
+                <polygon points="368,38 388,24 408,38" fill="var(--color-gold)" />
+              </g>
+              {/* windows */}
+              <g fill="#fffdf8" opacity="0.8">
+                {[44, 56, 68].map((y) => (
+                  <g key={y}>
+                    <rect x="44" y={y + 8} width="6" height="6" rx="1" />
+                    <rect x="58" y={y + 8} width="6" height="6" rx="1" />
+                    <rect x="112" y={y} width="6" height="6" rx="1" />
+                    <rect x="126" y={y} width="6" height="6" rx="1" />
+                    <rect x="280" y={y + 6} width="6" height="6" rx="1" />
+                    <rect x="294" y={y + 6} width="6" height="6" rx="1" />
+                    <rect x="376" y={y} width="6" height="6" rx="1" />
+                    <rect x="392" y={y} width="6" height="6" rx="1" />
+                  </g>
+                ))}
+              </g>
+            </svg>
             <div className="relative">
               <h1 className="text-[22px] font-bold tracking-tight text-ink">
                 {greeting}! <span className="align-middle">🏠</span>
@@ -233,34 +282,35 @@ export default function Dashboard() {
             </div>
           </header>
 
-          {/* Quick starts — only on the landing view */}
-          {view === "psf" && (
-            <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {QUICK_STARTS.map((q) => (
+          {/* Quick starts — always visible so the main journeys are one tap away */}
+          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {QUICK_STARTS.map((q) => {
+              const active = view === q.view;
+              return (
                 <button
                   key={q.view}
                   onClick={() => setView(q.view)}
                   className="group rounded-2xl border p-3.5 text-left transition hover:-translate-y-0.5"
                   style={{
-                    background: `color-mix(in srgb, ${q.color} 8%, var(--color-card))`,
-                    borderColor: `color-mix(in srgb, ${q.color} 22%, transparent)`,
+                    background: `color-mix(in srgb, ${q.color} ${active ? 16 : 8}%, var(--color-card))`,
+                    borderColor: `color-mix(in srgb, ${q.color} ${active ? 55 : 22}%, transparent)`,
                   }}
                 >
                   <span
-                    className="flex h-9 w-9 items-center justify-center rounded-full"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl"
                     style={{ background: `color-mix(in srgb, ${q.color} 18%, transparent)`, color: q.color }}
                   >
                     {q.icon}
                   </span>
                   <div className="mt-2 text-[13px] font-bold leading-snug text-ink">{q.title}</div>
-                  <div className="mt-0.5 text-[11px] leading-snug text-muted">{q.desc}</div>
+                  <div className="mt-0.5 hidden text-[11px] leading-snug text-muted sm:block">{q.desc}</div>
                   <div className="mt-1.5 text-[11px] font-semibold" style={{ color: q.color }}>
-                    Open <span className="inline-block transition group-hover:translate-x-0.5">→</span>
+                    {active ? "You're here" : <>Open <span className="inline-block transition group-hover:translate-x-0.5">→</span></>}
                   </div>
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
 
           {meta?.error && (
             <div className="mt-4 rounded-xl border border-clay/30 bg-clay/5 px-4 py-3 text-sm text-clay">
@@ -324,7 +374,7 @@ export default function Dashboard() {
                   <Spinner label="Loading dataset…" />
                 </div>
               ) : (
-                <FilterBar meta={meta} filters={filters} onChange={setFilters} />
+                <FilterBar meta={meta} filters={filters} onChange={setFilters} fields={VIEW_FILTERS[v]} />
               )}
             </div>
           )}

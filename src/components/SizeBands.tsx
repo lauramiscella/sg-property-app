@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { TxnFilter } from "@/lib/types";
 import { SizeBandRow } from "@/lib/analysis";
 import { toQuery } from "@/lib/query";
 import { useApi } from "@/lib/useApi";
 import { fmtSGD, fmtNum, fmtPct } from "@/lib/format";
-import { Card, Spinner, Empty } from "./ui";
+import { Card, Spinner, Empty, Segmented } from "./ui";
 
-const COLORS = ["#8f4a5e", "#a85a4a", "#b0743a", "#c08a3c", "#7c8a44", "#3f7d57"];
+const COLORS = ["#9d3b63", "#c34a2f", "#d97a1f", "#d4a017", "#7a9a2e", "#2f8f5b"];
 
 export default function SizeBands({ filters }: { filters: TxnFilter }) {
-  const url = `/api/size-bands${toQuery(filters)}`;
+  const [window, setWindow] = useState<"all" | "12">("all");
+  const url = `/api/size-bands${toQuery(filters, window === "12" ? { months: 12 } : {})}`;
   const { data, loading } = useApi<{ rows: SizeBandRow[] }>(url);
   const rows = data?.rows ?? [];
   const best = rows.reduce<SizeBandRow | null>((a, r) => ((r.cagrPct ?? -99) > (a?.cagrPct ?? -99) ? r : a), null);
@@ -19,7 +21,17 @@ export default function SizeBands({ filters }: { filters: TxnFilter }) {
   return (
     <Card
       title="Do bigger units perform better?"
-      subtitle="Median PSF and price growth by unit size band, for your current filters."
+      subtitle={window === "12" ? "Median PSF by unit size, last 12 months only." : "Median PSF and price growth by unit size band, across all available years."}
+      right={
+        <Segmented<"all" | "12">
+          value={window}
+          onChange={setWindow}
+          options={[
+            { value: "all", label: "All years" },
+            { value: "12", label: "Last 12 months" },
+          ]}
+        />
+      }
     >
       {loading ? (
         <div className="py-16"><Spinner /></div>
@@ -84,7 +96,7 @@ export default function SizeBands({ filters }: { filters: TxnFilter }) {
           <p className="mt-3 text-xs text-muted">
             Smaller units usually carry higher PSF (the &ldquo;quantum effect&rdquo;) — that&apos;s normal and
             doesn&apos;t mean they&apos;re overpriced. The growth columns answer the real question: which size held
-            or grew value fastest in this slice. Bands need ≥5 caveats per year to count.
+            or grew value fastest. {window === "12" ? "Growth needs at least two years of data, so it shows — in the 12-month view; switch to All years for growth." : "Bands need ≥5 caveats per year to count."}
           </p>
         </>
       )}

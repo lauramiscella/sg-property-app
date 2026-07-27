@@ -330,30 +330,49 @@ export interface BreakevenInput {
   agentFeePct: number;
   gstPct: number;
   maxYears?: number; // default 5
+  // Optional holding costs, added per year of ownership:
+  monthlyMaintenance?: number; // condo maintenance fee $/month
+  annualPropertyTax?: number; // IRAS property tax $/year
+  loanAmount?: number; // for the interest cost approximation
+  loanInterestPct?: number; // e.g. 3.5 (% p.a.) — interest ≈ loan × rate (approximation)
 }
 
 export interface BreakevenRow {
   year: number;
   ssdRate: number;
+  holdingCosts: number; // cumulative holding costs by that year
   breakevenPrice: number | null;
   breakevenGrowthPct: number | null; // total % rise needed
   breakevenCagrPct: number | null; // annualised
 }
 
-export function breakevenSchedule(i: BreakevenInput): { entryCost: number; bsd: number; absd: number; rows: BreakevenRow[] } {
+export function breakevenSchedule(i: BreakevenInput): {
+  entryCost: number;
+  bsd: number;
+  absd: number;
+  annualHolding: number;
+  rows: BreakevenRow[];
+} {
   const bsd = buyerStampDuty(i.price);
   const absdVal = absd(i.price, i.profile, i.propertyCount);
   const entryCost = i.price + bsd + absdVal;
   const feeRate = (i.agentFeePct / 100) * (1 + i.gstPct / 100);
+  // Holding costs per year of ownership. Interest uses a flat loan × rate
+  // approximation (real amortising interest falls slowly over time).
+  const annualHolding =
+    (i.monthlyMaintenance ?? 0) * 12 +
+    (i.annualPropertyTax ?? 0) +
+    (i.loanAmount ?? 0) * ((i.loanInterestPct ?? 0) / 100);
   const maxYears = i.maxYears ?? 5;
   const rows: BreakevenRow[] = [];
   for (let year = 1; year <= maxYears; year++) {
     const sr = ssdRate(year - 1, i.boughtOnOrAfterJul2025); // tier for a sale during year N
+    const holdingCosts = Math.round(annualHolding * year);
     const denom = 1 - feeRate - sr;
-    const bePrice = denom > 0 ? entryCost / denom : null;
+    const bePrice = denom > 0 ? (entryCost + holdingCosts) / denom : null;
     const growth = bePrice ? (bePrice / i.price - 1) * 100 : null;
     const cagrPct = bePrice ? (Math.pow(bePrice / i.price, 1 / year) - 1) * 100 : null;
-    rows.push({ year, ssdRate: sr, breakevenPrice: bePrice ? Math.round(bePrice) : null, breakevenGrowthPct: growth, breakevenCagrPct: cagrPct });
+    rows.push({ year, ssdRate: sr, holdingCosts, breakevenPrice: bePrice ? Math.round(bePrice) : null, breakevenGrowthPct: growth, breakevenCagrPct: cagrPct });
   }
-  return { entryCost, bsd, absd: absdVal, rows };
+  return { entryCost, bsd, absd: absdVal, annualHolding: Math.round(annualHolding), rows };
 }

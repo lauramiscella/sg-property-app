@@ -43,9 +43,13 @@ export default function Compare({ meta }: { meta: Meta }) {
     if (!missing.length) return;
     let cancelled = false;
     setLoading(true);
+    // Standardised window: the last 5 full years, so every selection is compared
+    // over the same period.
+    const maxM = meta.months?.max;
+    const from = maxM ? `${Number(maxM.split("-")[0]) - 5}-${maxM.split("-")[1]}` : undefined;
     Promise.all(
       missing.map((s) => {
-        const qs = new URLSearchParams({ groupBy: "year", [mode]: s }).toString();
+        const qs = new URLSearchParams({ groupBy: "year", [mode]: s, ...(from ? { from } : {}) }).toString();
         return fetch(`/api/psf-trends?${qs}`)
           .then((r) => r.json())
           .then((j) => ({
@@ -66,7 +70,7 @@ export default function Compare({ meta }: { meta: Meta }) {
     return () => {
       cancelled = true;
     };
-  }, [selected, mode, series]);
+  }, [selected, mode, series, meta.months?.max]);
 
   const active = selected.map((s) => series[s]).filter(Boolean) as Series[];
 
@@ -239,7 +243,10 @@ export default function Compare({ meta }: { meta: Meta }) {
       </Card>
 
       {table.length > 0 && (
-        <Card title="Side by side" subtitle="First vs latest year with data, per selection.">
+        <Card
+          title="Side by side"
+          subtitle="Standardised to the last 5 years, so every selection is compared over the same period. CAGR = the average growth per year, compounded — e.g. 6% CAGR means prices grew about 6% every year on average."
+        >
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
@@ -249,7 +256,7 @@ export default function Compare({ meta }: { meta: Meta }) {
                   <th className="px-3 py-2.5 text-right font-medium">Entry PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Latest PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Total growth</th>
-                  <th className="px-3 py-2.5 text-right font-medium">CAGR</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Avg growth / yr (CAGR)</th>
                   <th className="px-3 py-2.5 text-right font-medium">Caveats</th>
                 </tr>
               </thead>

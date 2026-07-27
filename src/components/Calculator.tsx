@@ -25,10 +25,10 @@ export default function Calculator() {
           value={sub}
           onChange={setSub}
           options={[
-            { value: "buy", label: "Single purchase" },
-            { value: "maxprice", label: "Max price" },
-            { value: "prog", label: "Asset progression" },
-            { value: "breakeven", label: "Breakeven" },
+            { value: "buy", label: "Purchase Outlay" },
+            { value: "maxprice", label: "What Can I Afford?" },
+            { value: "prog", label: "Sell & Buy (Upgrade)" },
+            { value: "breakeven", label: "Sell Without Losing" },
           ]}
         />
         <span className="text-xs text-muted">Rates verified {RATE_NOTES.verified}</span>
@@ -411,14 +411,23 @@ function Breakeven() {
   const [newRegime, setNewRegime] = useState(true);
   const [fee, setFee] = useState(2);
   const [gst, setGst] = useState(9);
+  const [includeHolding, setIncludeHolding] = useState(false);
+  const [maint, setMaint] = useState(350);
+  const [tax, setTax] = useState(3_500);
+  const [loanAmt, setLoanAmt] = useState(1_350_000);
+  const [loanRate, setLoanRate] = useState(3.5);
 
-  const { entryCost, bsd, absd, rows } = breakevenSchedule({
+  const { entryCost, bsd, absd, annualHolding, rows } = breakevenSchedule({
     price,
     profile,
     propertyCount: count,
     boughtOnOrAfterJul2025: newRegime,
     agentFeePct: fee,
     gstPct: gst,
+    monthlyMaintenance: includeHolding ? maint : 0,
+    annualPropertyTax: includeHolding ? tax : 0,
+    loanAmount: includeHolding ? loanAmt : 0,
+    loanInterestPct: includeHolding ? loanRate : 0,
   });
 
   // The "floor" is the first year SSD hits 0 — pure cost drag, no SSD.
@@ -426,7 +435,7 @@ function Breakeven() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,330px)_1fr]">
-      <Card title="Your inputs" subtitle="How much must the price rise just to walk away whole?">
+      <Card title="Your inputs" subtitle="If I had to sell in year 1, 2, 3… how much must my home be worth so I don't lose money?">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Field label="Purchase price (SGD)">
@@ -453,51 +462,91 @@ function Breakeven() {
                 options={[{ value: "yes", label: "Yes — 4-yr SSD" }, { value: "no", label: "No — 3-yr SSD" }]} />
             </Field>
           </div>
+          <div className="col-span-2">
+            <Field label="Include yearly running costs?">
+              <Select value={includeHolding ? "yes" : "no"} onChange={(v) => setIncludeHolding(v === "yes")} placeholder=""
+                options={[{ value: "no", label: "No — just buy & sell costs" }, { value: "yes", label: "Yes — add maintenance, tax, interest" }]} />
+            </Field>
+          </div>
+          {includeHolding && (
+            <>
+              <Field label="Maintenance $/mo">
+                <TextInput type="number" value={String(maint)} onChange={(v) => setMaint(Number(v) || 0)} />
+              </Field>
+              <Field label="Property tax $/yr">
+                <TextInput type="number" value={String(tax)} onChange={(v) => setTax(Number(v) || 0)} />
+              </Field>
+              <Field label="Loan amount">
+                <TextInput type="number" value={String(loanAmt)} onChange={(v) => setLoanAmt(Number(v) || 0)} />
+              </Field>
+              <Field label="Loan interest %">
+                <TextInput type="number" value={String(loanRate)} onChange={(v) => setLoanRate(Number(v) || 0)} />
+              </Field>
+            </>
+          )}
         </div>
+        {includeHolding && (
+          <p className="mt-2 text-[11px] text-muted">
+            Adds ≈{fmtSGD(annualHolding)}/year to the target. Interest is approximated as loan × rate; check your
+            IRAS property tax notice for the exact tax. New launches pay little of this while building; resale pays
+            from day one.
+          </p>
+        )}
       </Card>
 
       <div className="space-y-5">
-        <Card title="Entry cost & cost floor">
+        <Card title="What you've put in">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Kpi label="All-in entry cost" value={fmtSGD(entryCost)} sub="price + BSD + ABSD" accent="amber" />
+            <Kpi label="All-in cost to buy" value={fmtSGD(entryCost)} sub="price + BSD + ABSD" accent="amber" />
             <Kpi label="Stamp duty paid" value={fmtSGD(bsd + absd)} sub={`BSD ${fmtSGD(bsd)} + ABSD ${fmtSGD(absd)}`} accent="plum" />
-            <Kpi label="Breakeven once past SSD" value={fmtPct(floor.breakevenGrowthPct)} sub={`price must rise this much (yr ${floor.year}+)`} accent="brick" tone="down" />
+            <Kpi
+              label="Safe-to-sell year"
+              value={`Year ${floor.year}+`}
+              sub={`needs just ${fmtPct(floor.breakevenGrowthPct)} rise (no more SSD)`}
+              accent="emerald"
+              tone="up"
+            />
           </div>
           <p className="mt-3 text-xs text-muted">
-            Even with no SSD, the price must rise by the &ldquo;past SSD&rdquo; figure above just to cover stamp duty on
-            the way in and agent fee on the way out. Selling earlier adds SSD on top.
+            Plain English: buying costs you stamp duty going in and agent fee going out, so even after the SSD
+            period your home must be worth a bit more than you paid before selling breaks even. Selling earlier
+            adds SSD on top — that&apos;s why year 1 needs the biggest rise.
           </p>
         </Card>
 
-        <Card title="Breakeven by holding year" subtitle="The price rise needed to sell without a loss, if sold during each year.">
+        <Card
+          title="If you sold in year…"
+          subtitle="What your home must be worth that year to walk away without losing money."
+        >
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[520px] text-sm">
+            <table className="w-full min-w-[600px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
-                  <th className="px-3 py-2.5 font-medium">Sell in year</th>
-                  <th className="px-3 py-2.5 text-right font-medium">SSD</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Breakeven price</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Total rise needed</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Per year (CAGR)</th>
+                  <th className="px-3 py-2.5 font-medium">Sell in</th>
+                  <th className="px-3 py-2.5 text-right font-medium">SSD penalty</th>
+                  {annualHolding > 0 && <th className="px-3 py-2.5 text-right font-medium">Running costs so far</th>}
+                  <th className="px-3 py-2.5 text-right font-medium">Home must be worth</th>
+                  <th className="px-3 py-2.5 text-right font-medium">That&apos;s a rise of</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.year} className={`border-b border-line/60 last:border-0 ${r.ssdRate === 0 ? "bg-emerald/5" : ""}`}>
-                    <td className="px-3 py-2.5 font-medium text-ink">Year {r.year}</td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${r.ssdRate > 0 ? "text-brick" : "text-muted"}`}>{fmtPct(r.ssdRate * 100, 0)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.breakevenPrice)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-amber">{fmtPct(r.breakevenGrowthPct)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtPct(r.breakevenCagrPct)}</td>
+                    <td className="px-3 py-2.5 font-medium text-ink">Year {r.year}{r.ssdRate === 0 && <span className="ml-1.5 rounded bg-emerald/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald">SSD-free</span>}</td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${r.ssdRate > 0 ? "text-brick" : "text-muted"}`}>{r.ssdRate > 0 ? fmtPct(r.ssdRate * 100, 0) : "none"}</td>
+                    {annualHolding > 0 && <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.holdingCosts)}</td>}
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-ink">{fmtSGD(r.breakevenPrice)}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-amber">{fmtPct(r.breakevenGrowthPct)} <span className="font-normal text-muted">({fmtPct(r.breakevenCagrPct)}/yr)</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <p className="mt-3 text-xs text-muted">
-            Breakeven covers stamp duties, agent fee + GST and any SSD — not mortgage interest, maintenance or property
-            tax, which raise the real breakeven further. Compare the &ldquo;per year&rdquo; figure against a project&apos;s
-            historical CAGR on the Appreciation and Compare tabs to sense-check whether it&apos;s realistic.
+            Covers stamp duties, agent fee + GST, SSD{annualHolding > 0 ? ", and your yearly running costs" : ""}.
+            {annualHolding === 0 && " Toggle on running costs (maintenance, property tax, loan interest) for a fuller picture."}
+            {" "}Sense-check the &ldquo;/yr&rdquo; figure against real project growth on the Performance &amp; Compare tab —
+            if breakeven needs 8%/yr and similar projects grew 5%/yr, the timeline is optimistic.
           </p>
         </Card>
       </div>

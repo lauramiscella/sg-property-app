@@ -17,6 +17,7 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
   const [matchBy, setMatchBy] = useState<MatchBy>("project");
   const [project, setProject] = useState("");
   const [district, setDistrict] = useState("");
+  const [ptype, setPtype] = useState("");
   const [sqft, setSqft] = useState("");
   const [price, setPrice] = useState("");
   const [data, setData] = useState<ValuationResult | null>(null);
@@ -31,9 +32,10 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
     }
     let cancelled = false;
     setLoading(true);
-    const sp = new URLSearchParams({ sqft, price, months: "24" });
+    const sp = new URLSearchParams({ sqft, price, months: "12" });
     if (matchBy === "project") sp.set("project", project);
     else sp.set("district", district);
+    if (ptype) sp.set("propertyType", ptype);
     fetch(`/api/overpay?${sp.toString()}`)
       .then((r) => r.json())
       .then((d) => !cancelled && setData(d))
@@ -41,7 +43,7 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
     return () => {
       cancelled = true;
     };
-  }, [ready, matchBy, project, district, sqft, price]);
+  }, [ready, matchBy, project, district, sqft, price, ptype]);
 
   const verdictCopy = useMemo(() => {
     if (!data?.verdict) return null;
@@ -92,6 +94,11 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
               </Field>
             </div>
           )}
+          <div className="col-span-2">
+            <Field label="Property type">
+              <Select value={ptype} onChange={setPtype} options={meta.propertyTypes.map((t) => ({ value: t, label: t }))} placeholder="All private types" />
+            </Field>
+          </div>
           <Field label="Unit size (sqft)">
             <TextInput type="number" value={sqft} onChange={setSqft} placeholder="e.g. 900" />
           </Field>
@@ -99,6 +106,9 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
             <TextInput type="number" value={price} onChange={setPrice} placeholder="e.g. 2100000" />
           </Field>
         </div>
+        <p className="mt-2 text-[11px] text-muted">
+          Private residential only (condo, apartment, landed, EC as lodged) — HDB resale isn&apos;t in URA caveat data.
+        </p>
         {Number(sqft) > 0 && Number(price) > 0 && (
           <div className="mt-3 rounded-lg border border-line bg-card-2 px-3 py-2 text-xs text-ink-soft">
             That&apos;s <b>{fmtSGD(Number(price) / Number(sqft))}</b> psf.
@@ -107,7 +117,7 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
       </Card>
 
       <div className="space-y-5">
-        <Card title="Where it sits" subtitle="Against comparable caveats: similar size (±15%), last 24 months.">
+        <Card title="Where it sits" subtitle="Against comparable caveats: similar size (±15%), last 12 months.">
           {!ready ? (
             <Empty>Pick a project or district, then enter a size and price.</Empty>
           ) : loading && !data ? (

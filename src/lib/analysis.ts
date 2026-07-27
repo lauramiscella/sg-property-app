@@ -212,12 +212,14 @@ export interface BudgetRow {
   medianPrice: number | null;
   medianSqft: number | null;
   medianPsf: number | null;
+  totalProjects: number;
   topProjects: { name: string; count: number }[];
 }
 
 export function budgetExplorer(
   txns: Txn[],
-  budget: number,
+  budgetMin: number,
+  budgetMax: number,
   opts: { months?: number; maxMonth?: string; propertyType?: string } = {}
 ): { rows: BudgetRow[]; total: number; windowMonths: number } {
   const months = opts.months ?? 24;
@@ -229,7 +231,8 @@ export function budgetExplorer(
   }
   const list = txns.filter(
     (t) =>
-      t.price <= budget &&
+      t.price >= budgetMin &&
+      t.price <= budgetMax &&
       (!opts.maxMonth || t.month >= cutoff) &&
       (!opts.propertyType || t.propertyType === opts.propertyType)
   );
@@ -245,9 +248,10 @@ export function budgetExplorer(
         medianPrice: round(median(ts.map((t) => t.price))),
         medianSqft: round(median(ts.map((t) => t.areaSqft))),
         medianPsf: round(median(ts.map((t) => t.psf))),
+        totalProjects: projCount.size,
         topProjects: Array.from(projCount.entries())
           .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
+          .slice(0, 5)
           .map(([name, count]) => ({ name, count })),
       };
     })
@@ -265,26 +269,27 @@ export interface MomentumRow {
   volPrior: number;
 }
 
-export function districtMomentum(txns: Txn[], maxMonth?: string): MomentumRow[] {
+export function districtMomentum(txns: Txn[], maxMonth?: string, windowMonths = 12): MomentumRow[] {
   if (!maxMonth) return [];
   const shift = (mm: string, back: number) => {
     const [y, m] = mm.split("-").map(Number);
     const t = y * 12 + (m - 1) - back;
     return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
   };
-  const c12 = shift(maxMonth, 11);
-  const c24 = shift(maxMonth, 23);
+  const cNow = shift(maxMonth, windowMonths - 1);
+  const cPrior = shift(maxMonth, windowMonths * 2 - 1);
+  const minSamples = windowMonths >= 12 ? 10 : windowMonths >= 6 ? 6 : 3;
   const byDistrict = new Map<string, { now: number[]; prior: number[] }>();
   for (const t of txns) {
     if (!byDistrict.has(t.district)) byDistrict.set(t.district, { now: [], prior: [] });
     const b = byDistrict.get(t.district)!;
-    if (t.month >= c12) b.now.push(t.psf);
-    else if (t.month >= c24) b.prior.push(t.psf);
+    if (t.month >= cNow) b.now.push(t.psf);
+    else if (t.month >= cPrior) b.prior.push(t.psf);
   }
   return Array.from(byDistrict.entries())
     .map(([district, b]) => {
-      const psfNow = b.now.length >= 10 ? round(median(b.now)) : null;
-      const psfPrior = b.prior.length >= 10 ? round(median(b.prior)) : null;
+      const psfNow = b.now.length >= minSamples ? round(median(b.now)) : null;
+      const psfPrior = b.prior.length >= minSamples ? round(median(b.prior)) : null;
       return {
         district,
         psfNow,

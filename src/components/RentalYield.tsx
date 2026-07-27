@@ -114,10 +114,10 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
                       fontSize: 12,
                     }}
                   />
-                  <Bar dataKey="yield" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                  <Bar dataKey="yield" radius={[0, 6, 6, 0]} maxBarSize={22}>
                     {chartData.map((_, i) => {
-                      const ramp = ["#8f4a5e", "#a85a4a", "#b0743a", "#c08a3c", "#9a8a3f", "#7c8a44"];
-                      return <Cell key={i} fill={ramp[Math.min(i, ramp.length - 1)]} />;
+                      const ramp = ["#9d3b63", "#c34a2f", "#d97a1f", "#d4a017", "#7a9a2e", "#2f8f5b", "#2e8f7a"];
+                      return <Cell key={i} fill={ramp[i % ramp.length]} />;
                     })}
                   </Bar>
                 </BarChart>
