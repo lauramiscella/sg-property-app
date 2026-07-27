@@ -139,7 +139,7 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
       {rows.length > 0 && (
         <Card title="Yield table" subtitle="Sorted by gross yield. Segments need ≥2 rent and ≥2 sale caveats.">
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[460px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Segment</th>

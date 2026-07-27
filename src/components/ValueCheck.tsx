@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Meta, ValuationResult } from "@/lib/analysis";
 import { districtLabel, dShort, fmtSGD, fmtNum } from "@/lib/format";
 import { Card, Field, Select, TextInput, Kpi, Spinner, Empty, Ring } from "./ui";
+import ProjectSearch from "./ProjectSearch";
 
 type MatchBy = "project" | "district";
 
@@ -70,20 +71,12 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
           {matchBy === "project" ? (
             <div className="col-span-2">
               <Field label="Project">
-                <>
-                  <input
-                    list="vc-projects"
-                    value={project}
-                    onChange={(e) => setProject(e.target.value)}
-                    placeholder="Type a project"
-                    className="h-9 w-full rounded-lg border border-line bg-card px-2.5 text-sm outline-none focus:border-amber focus:ring-2 focus:ring-amber/20"
-                  />
-                  <datalist id="vc-projects">
-                    {meta.projects.slice(0, 400).map((p) => (
-                      <option key={p.name} value={p.name}>{`${dShort(p.district)} · ${p.count} caveats`}</option>
-                    ))}
-                  </datalist>
-                </>
+                <ProjectSearch
+                  projects={meta.projects.slice(0, 400)}
+                  value={project}
+                  onChange={setProject}
+                  placeholder="Type a project"
+                />
               </Field>
             </div>
           ) : (
@@ -96,7 +89,14 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
           )}
           <div className="col-span-2">
             <Field label="Property type">
-              <Select value={ptype} onChange={setPtype} options={meta.propertyTypes.map((t) => ({ value: t, label: t }))} placeholder="All private types" />
+              <Select
+                value={ptype}
+                onChange={setPtype}
+                options={meta.propertyTypes
+                  .filter((t) => !/^apartment$/i.test(t)) // folded into Condominium
+                  .map((t) => ({ value: t, label: t }))}
+                placeholder="All private types"
+              />
             </Field>
           </div>
           <Field label="Unit size (sqft)">

@@ -141,7 +141,7 @@ export default function Budget({ meta }: { meta: Meta }) {
               <Kpi label="Median PSF there" value={fmtSGD(biggest?.medianPsf ?? null)} accent="plum" sub="at that district" />
             </div>
             <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[760px] text-sm">
+              <table className="w-full min-w-[620px] text-sm">
                 <thead>
                   <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                     <th className="px-3 py-2.5 font-medium">District</th>

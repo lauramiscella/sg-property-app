@@ -6,11 +6,25 @@ import { median, mean, quantile } from "./format";
 
 // ---- Filtering --------------------------------------------------------------
 
+// "Apartment" and "Condominium" overlap in everyday use, so selecting
+// Condominium matches both. (Executive Condominium stays separate.)
+export function propertyTypeMatches(actual: string, selected: string): boolean {
+  const s = selected.toLowerCase();
+  if (s.includes("condominium") && !s.includes("executive")) {
+    const a = actual.toLowerCase();
+    return a === "condominium" || a === "apartment";
+  }
+  return actual === selected;
+}
+
 export function applyFilters(txns: Txn[], f: TxnFilter): Txn[] {
+  // URA stores project names in ALL CAPS — match case-insensitively so a
+  // hand-typed "Amber Park" still finds "AMBER PARK".
+  const proj = f.project?.trim().toLowerCase();
   return txns.filter((t) => {
     if (f.district && t.district !== f.district) return false;
-    if (f.project && t.project !== f.project) return false;
-    if (f.propertyType && t.propertyType !== f.propertyType) return false;
+    if (proj && t.project.toLowerCase() !== proj) return false;
+    if (f.propertyType && !propertyTypeMatches(t.propertyType, f.propertyType)) return false;
     if (f.saleType && t.saleType !== f.saleType) return false;
     if (f.marketSegment && t.marketSegment !== f.marketSegment) return false;
     if (f.tenureType && t.tenureType !== f.tenureType) return false;
@@ -521,8 +535,8 @@ export function rentalYield(
   const recentCut = ds.rentalQuarters.length ? ds.rentalQuarters[0].slice(0, 4) : "2000";
   const rentals = ds.rentals.filter((r) => {
     if (filter.district && r.district !== filter.district) return false;
-    if (filter.project && r.project !== filter.project) return false;
-    if (filter.propertyType && r.propertyType !== filter.propertyType) return false;
+    if (filter.project && r.project.toLowerCase() !== filter.project.trim().toLowerCase()) return false;
+    if (filter.propertyType && !propertyTypeMatches(r.propertyType, filter.propertyType)) return false;
     return true;
   });
 

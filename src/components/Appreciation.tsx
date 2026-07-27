@@ -33,7 +33,7 @@ export default function Appreciation({ filters }: { filters: TxnFilter }) {
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[660px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Project</th>

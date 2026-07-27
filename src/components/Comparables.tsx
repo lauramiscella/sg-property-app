@@ -150,7 +150,7 @@ export default function Comparables({
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[860px] text-sm">
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <Th onClick={() => toggleSort("date")} active={sort === "date"} dir={dir}>

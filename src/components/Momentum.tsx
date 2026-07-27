@@ -65,7 +65,7 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
             </ResponsiveContainer>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[540px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">District</th>

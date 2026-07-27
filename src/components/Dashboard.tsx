@@ -84,7 +84,7 @@ const NO_FILTER_VIEWS: View[] = ["calc", "value", "budget"];
 // Only the filters that make sense for each view — everything else is hidden.
 const VIEW_FILTERS: Partial<Record<View, FilterField[]>> = {
   psf: ["district", "project", "propertyType", "saleType", "marketSegment", "tenureType", "size", "price"],
-  momentum: ["propertyType", "saleType", "marketSegment"],
+  momentum: ["district", "propertyType", "saleType", "marketSegment"],
   tenure: ["district", "propertyType", "saleType", "marketSegment"],
   appreciation: ["project"],
   yield: ["district", "project", "propertyType"],

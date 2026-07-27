@@ -4,6 +4,7 @@ import { TxnFilter } from "@/lib/types";
 import { Meta } from "@/lib/analysis";
 import { districtLabel } from "@/lib/format";
 import { Field, Select, TextInput } from "./ui";
+import ProjectSearch from "./ProjectSearch";
 import { useMemo } from "react";
 
 export type FilterField =
@@ -54,20 +55,12 @@ export default function FilterBar({
 
         {has("project") && (
           <Field label="Project">
-            <>
-              <input
-                list="project-list"
-                value={filters.project || ""}
-                onChange={(e) => set({ project: e.target.value || undefined })}
-                placeholder="Any project"
-                className="h-9 w-full rounded-lg border border-line bg-card px-2.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-amber focus:ring-2 focus:ring-amber/20"
-              />
-              <datalist id="project-list">
-                {projectOptions.map((p) => (
-                  <option key={p.name} value={p.name}>{`D${parseInt(p.district, 10)} · ${p.count} caveats`}</option>
-                ))}
-              </datalist>
-            </>
+            <ProjectSearch
+              projects={projectOptions}
+              value={filters.project || ""}
+              onChange={(v) => set({ project: v || undefined })}
+              placeholder="Any project"
+            />
           </Field>
         )}
 
@@ -76,7 +69,9 @@ export default function FilterBar({
             <Select
               value={filters.propertyType || ""}
               onChange={(v) => set({ propertyType: v || undefined })}
-              options={meta.propertyTypes.map((t) => ({ value: t, label: t }))}
+              options={meta.propertyTypes
+                .filter((t) => !/^apartment$/i.test(t)) // folded into Condominium
+                .map((t) => ({ value: t, label: t }))}
               placeholder="All types"
             />
           </Field>

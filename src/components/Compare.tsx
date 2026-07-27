@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Meta, TrendPoint } from "@/lib/analysis";
 import { districtLabel, dShort, fmtSGD, fmtPct, fmtNum } from "@/lib/format";
 import { Card, Segmented, Select, Spinner, Empty } from "./ui";
+import ProjectSearch from "./ProjectSearch";
 
 type Mode = "project" | "district";
 type Metric = "index" | "psf";
@@ -162,27 +163,18 @@ export default function Compare({ meta }: { meta: Meta }) {
         {/* Add + chips */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {mode === "project" ? (
-            <>
-              <input
-                list="cmp-projects"
+            <div className="w-64">
+              <ProjectSearch
+                projects={meta.projects.filter((p) => !selected.includes(p.name)).slice(0, 400)}
                 value={pending}
-                onChange={(e) => setPending(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addEntity(pending);
-                    setPending("");
-                  }
+                onChange={setPending}
+                onSelect={(name) => {
+                  addEntity(name);
+                  setPending("");
                 }}
-                placeholder={selected.length >= MAX ? "Max 6 — remove one to add" : "Add a project + Enter"}
-                disabled={selected.length >= MAX}
-                className="h-9 w-64 rounded-lg border border-line bg-card px-2.5 text-sm outline-none focus:border-amber focus:ring-2 focus:ring-amber/20"
+                placeholder={selected.length >= MAX ? "Max 6 — remove one to add" : "Add a project"}
               />
-              <datalist id="cmp-projects">
-                {meta.projects.filter((p) => !selected.includes(p.name)).slice(0, 400).map((p) => (
-                  <option key={p.name} value={p.name}>{`${dShort(p.district)} · ${p.count} caveats`}</option>
-                ))}
-              </datalist>
-            </>
+            </div>
           ) : (
             <div className="w-64">
               <Select value="" onChange={addEntity} options={addOptions} placeholder={selected.length >= MAX ? "Max 6 reached" : "Add a district"} />
@@ -243,7 +235,7 @@ export default function Compare({ meta }: { meta: Meta }) {
           subtitle="Standardised to the last 5 years, so every selection is compared over the same period. CAGR = the average growth per year, compounded — e.g. 6% CAGR means prices grew about 6% every year on average."
         >
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[540px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Selection</th>
