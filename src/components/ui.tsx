@@ -20,12 +20,12 @@ export function Card({
       className={`rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgba(70,55,35,0.04),0_8px_24px_-16px_rgba(70,55,35,0.18)] ${className}`}
     >
       {(title || right) && (
-        <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3 border-b border-line">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-4 pb-3 border-b border-line">
+          <div className="min-w-0">
             {title && <h3 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h3>}
             {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
           </div>
-          {right && <div className="shrink-0">{right}</div>}
+          {right && <div className="min-w-0 max-w-full">{right}</div>}
         </div>
       )}
       <div className="p-5">{children}</div>
@@ -183,7 +183,7 @@ export function Segmented<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-line bg-card-2 p-0.5">
+    <div className="inline-flex flex-wrap rounded-lg border border-line bg-card-2 p-0.5">
       {options.map((o) => (
         <button
           key={o.value}

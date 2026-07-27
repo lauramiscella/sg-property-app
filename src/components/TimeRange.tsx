@@ -10,7 +10,6 @@ const PRESETS: { label: string; years: number | null }[] = [
   { label: "1Y", years: 1 },
   { label: "3Y", years: 3 },
   { label: "5Y", years: 5 },
-  { label: "10Y", years: 10 },
   { label: "All", years: null },
 ];
 

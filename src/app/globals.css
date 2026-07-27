@@ -37,6 +37,7 @@ html,
 body {
   background: var(--color-paper);
   color: var(--color-ink);
+  overflow-x: clip; /* nothing should push the page sideways on mobile */
 }
 
 body {
