@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
   const ds = await getDataset();
   const min = Number(sp.get("min") || 0);
   const max = Number(sp.get("max") || 0);
-  const propertyType = sp.get("propertyType") || undefined;
+  const types = sp.get("types")?.split("|").filter(Boolean);
   return NextResponse.json(
-    budgetExplorer(ds.txns, min, max, { months: 24, maxMonth: ds.transactionMonths?.max, propertyType })
+    budgetExplorer(ds.txns, min, max, { months: 24, maxMonth: ds.transactionMonths?.max, propertyTypes: types })
   );
 }

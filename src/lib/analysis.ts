@@ -220,7 +220,7 @@ export function budgetExplorer(
   txns: Txn[],
   budgetMin: number,
   budgetMax: number,
-  opts: { months?: number; maxMonth?: string; propertyType?: string } = {}
+  opts: { months?: number; maxMonth?: string; propertyTypes?: string[] } = {}
 ): { rows: BudgetRow[]; total: number; windowMonths: number } {
   const months = opts.months ?? 24;
   let cutoff = "0000-00";
@@ -229,12 +229,13 @@ export function budgetExplorer(
     const total = y * 12 + (m - 1) - (months - 1);
     cutoff = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
   }
+  const typeSet = opts.propertyTypes?.length ? new Set(opts.propertyTypes) : null;
   const list = txns.filter(
     (t) =>
       t.price >= budgetMin &&
       t.price <= budgetMax &&
       (!opts.maxMonth || t.month >= cutoff) &&
-      (!opts.propertyType || t.propertyType === opts.propertyType)
+      (!typeSet || typeSet.has(t.propertyType))
   );
   const byDistrict = new Map<string, Txn[]>();
   for (const t of list) (byDistrict.get(t.district) || byDistrict.set(t.district, []).get(t.district)!).push(t);

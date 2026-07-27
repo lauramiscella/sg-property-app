@@ -124,15 +124,9 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState<TxnFilter>({});
   const [view, setView] = useState<View>("psf");
-  const [greeting, setGreeting] = useState("Welcome back");
 
   const group = GROUPS.find((g) => g.views.some((v) => v.id === view))!;
   const activeView = group.views.find((v) => v.id === view)!;
-
-  useEffect(() => {
-    const h = new Date().getHours();
-    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
-  }, []);
 
   const loadMeta = useCallback(async () => {
     setMetaLoading(true);
@@ -217,60 +211,35 @@ export default function Dashboard() {
       {/* Main */}
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-[1080px] px-5 pb-24 pt-6">
-          {/* Greeting header with a pastel city skyline */}
+          {/* Header with the hand-sketched shophouse banner */}
           <header
-            className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5"
-            style={{ background: "linear-gradient(120deg, #fff8ec 0%, #fbf0dd 55%, #f4e6d0 100%)" }}
+            className="relative flex min-h-[150px] flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5"
+            style={{
+              backgroundColor: "#f5e9cf",
+              backgroundImage: "url(/header-banner.jpg)",
+              backgroundSize: "auto 100%",
+              backgroundPosition: "right center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <svg
-              className="pointer-events-none absolute bottom-0 right-0 h-[86px] w-[420px] max-w-[60%]"
-              viewBox="0 0 420 86"
-              preserveAspectRatio="xMaxYMax meet"
-              aria-hidden
-            >
-              {/* back row */}
-              <g opacity="0.35">
-                <rect x="8" y="30" width="34" height="56" rx="3" fill="var(--color-plum)" />
-                <rect x="70" y="18" width="30" height="68" rx="3" fill="var(--color-amber)" />
-                <rect x="150" y="36" width="40" height="50" rx="3" fill="var(--color-emerald)" />
-                <rect x="240" y="24" width="28" height="62" rx="3" fill="var(--color-gold)" />
-                <rect x="330" y="14" width="34" height="72" rx="3" fill="var(--color-clay)" />
-              </g>
-              {/* front row */}
-              <g opacity="0.55">
-                <rect x="36" y="46" width="40" height="40" rx="3" fill="var(--color-emerald)" />
-                <rect x="104" y="40" width="36" height="46" rx="3" fill="var(--color-plum)" />
-                <rect x="190" y="52" width="44" height="34" rx="3" fill="var(--color-amber)" />
-                <rect x="272" y="44" width="38" height="42" rx="3" fill="var(--color-emerald)" />
-                <rect x="368" y="38" width="40" height="48" rx="3" fill="var(--color-gold)" />
-                <polygon points="104,40 122,26 140,40" fill="var(--color-plum)" />
-                <polygon points="368,38 388,24 408,38" fill="var(--color-gold)" />
-              </g>
-              {/* windows */}
-              <g fill="#fffdf8" opacity="0.8">
-                {[44, 56, 68].map((y) => (
-                  <g key={y}>
-                    <rect x="44" y={y + 8} width="6" height="6" rx="1" />
-                    <rect x="58" y={y + 8} width="6" height="6" rx="1" />
-                    <rect x="112" y={y} width="6" height="6" rx="1" />
-                    <rect x="126" y={y} width="6" height="6" rx="1" />
-                    <rect x="280" y={y + 6} width="6" height="6" rx="1" />
-                    <rect x="294" y={y + 6} width="6" height="6" rx="1" />
-                    <rect x="376" y={y} width="6" height="6" rx="1" />
-                    <rect x="392" y={y} width="6" height="6" rx="1" />
-                  </g>
-                ))}
-              </g>
-            </svg>
-            <div className="relative">
+            {/* soft cream wash on the left so the text always stays readable */}
+            <span
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "linear-gradient(90deg, #f5e9cf 0%, rgba(245,233,207,0.92) 34%, rgba(245,233,207,0) 62%)" }}
+            />
+            <div className="relative max-w-[520px]">
               <h1 className="text-[22px] font-bold tracking-tight text-ink">
-                {greeting}! <span className="align-middle">🏠</span>
+                Welcome, sharol.ai <span className="align-middle">🏠</span>
               </h1>
-              <p className="mt-0.5 text-sm text-muted">
-                Singapore private residential, from official URA caveats — here&apos;s the market today.
+              <p className="mt-1 text-sm font-medium leading-snug text-ink-soft">
+                Built for homeowners and home-seekers — official URA transaction data, decoded so you
+                can make better-informed decisions.
+              </p>
+              <p className="mt-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-amber">
+                built by Sharol
               </p>
             </div>
-            <div className="relative flex flex-col items-end gap-2">
+            <div className="relative flex flex-col items-end gap-2 rounded-xl bg-[#f5e9cf]/90 p-2">
               {meta && <SourceBadge meta={meta} />}
               <button
                 onClick={refresh}
@@ -409,11 +378,23 @@ export default function Dashboard() {
             )}
           </main>
 
-          <footer className="mt-16 border-t border-line pt-5 text-xs text-muted">
-            Source: Urban Redevelopment Authority (URA) private residential caveats. Figures are as lodged and can
-            revise. PSF uses net price where a caveat records one. URA publishes roughly the last 5 years; this app
-            keeps older months as they age out, so its archive grows over time. This tool is for research, not formal
-            valuation or advice.
+          <footer className="mt-16 space-y-3 border-t border-line pt-5 text-xs text-muted">
+            <p className="font-semibold text-ink-soft">
+              Created by Sharol Pek · CEA Reg. No. R060616F · © {new Date().getFullYear()} All rights reserved.
+            </p>
+            <p>
+              <b>Disclaimer.</b> This dashboard exists to make publicly available property data more transparent and
+              easier to understand. All transaction figures are drawn from Urban Redevelopment Authority (URA) private
+              residential caveats, presented as lodged; they may be revised by URA and can lag the market. PSF uses net
+              price where a caveat records one. URA publishes roughly the last 5 years of caveats; this app retains
+              older months as they age out, so its archive grows over time. Calculator outputs use published IRAS/MAS
+              rates current at the time of verification and are estimates only.
+            </p>
+            <p>
+              Nothing on this site constitutes financial, investment or property advice, a recommendation to transact,
+              or a formal valuation. Figures are market-level statistics, not assessments of any specific unit. Please
+              verify independently and seek professional advice before making any property decision.
+            </p>
           </footer>
         </div>
       </div>
@@ -426,7 +407,7 @@ function SourceBadge({ meta }: { meta: Meta }) {
   return (
     <div
       className={`flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium ${
-        isSample ? "border-clay/40 bg-clay/5 text-clay" : "border-sage/40 bg-sage/5 text-sage"
+        isSample ? "border-clay/40 bg-card text-clay" : "border-sage/40 bg-card text-sage"
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isSample ? "bg-clay" : "bg-sage"}`} />

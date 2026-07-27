@@ -13,13 +13,16 @@ type Level = "district" | "project";
 
 export default function RentalYield({ filters, meta }: { filters: TxnFilter; meta: Meta }) {
   const [level, setLevel] = useState<Level>("district");
-  const url = `/api/rental-yield${toQuery(filters, { level })}`;
+  // When a specific project is filtered, always show results by project name —
+  // showing its district instead would be confusing.
+  const effLevel: Level = filters.project ? "project" : level;
+  const url = `/api/rental-yield${toQuery(filters, { level: effLevel })}`;
   const { data, loading } = useApi<{ rows: YieldRow[]; rentalQuarters: string[] }>(url);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
   const chartData = rows.slice(0, 12).map((r) => ({
     name:
-      level === "project"
+      effLevel === "project"
         ? `${r.project} · ${r.bedBand}`
         : `${dShort(r.district)} · ${r.bedBand}`,
     yield: r.grossYieldPct ?? 0,
@@ -39,14 +42,20 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
           data?.rentalQuarters?.length ? ` · rents ${data.rentalQuarters[data.rentalQuarters.length - 1]}–${data.rentalQuarters[0]}` : ""
         }`}
         right={
-          <Segmented<Level>
-            value={level}
-            onChange={setLevel}
-            options={[
-              { value: "district", label: "By district" },
-              { value: "project", label: "By project" },
-            ]}
-          />
+          filters.project ? (
+            <span className="rounded-lg border border-emerald/30 bg-emerald/5 px-2.5 py-1.5 text-xs font-semibold text-emerald">
+              Showing {filters.project}
+            </span>
+          ) : (
+            <Segmented<Level>
+              value={level}
+              onChange={setLevel}
+              options={[
+                { value: "district", label: "By district" },
+                { value: "project", label: "By project" },
+              ]}
+            />
+          )
         }
       >
         {loading ? (
@@ -71,7 +80,7 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
                 tone="up"
                 accent="emerald"
                 sub={
-                  level === "project"
+                  effLevel === "project"
                     ? `${best.project} · ${best.bedBand}`
                     : `${districtLabel(best.district)} · ${best.bedBand}`
                 }
@@ -102,7 +111,7 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
                     tick={{ fontSize: 11, fill: "#514a40" }}
                     tickLine={false}
                     axisLine={false}
-                    width={level === "project" ? 190 : 150}
+                    width={effLevel === "project" ? 190 : 150}
                   />
                   <Tooltip
                     cursor={{ fill: "#f6f1e8" }}
@@ -145,7 +154,7 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
                 {rows.map((r) => (
                   <tr key={r.key} className="border-b border-line/60 last:border-0 hover:bg-card-2">
                     <td className="px-3 py-2.5 font-medium text-ink">
-                      {level === "project" ? r.project : districtLabel(r.district)}
+                      {effLevel === "project" ? r.project : districtLabel(r.district)}
                     </td>
                     <td className="px-3 py-2.5 text-ink-soft">{r.bedBand}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">

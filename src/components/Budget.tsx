@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Meta, BudgetRow } from "@/lib/analysis";
 import { districtLabel, fmtSGD, fmtNum } from "@/lib/format";
-import { Card, Field, Select, TextInput, Kpi, Spinner, Empty } from "./ui";
+import { Card, Field, TextInput, Kpi, Spinner, Empty } from "./ui";
 
 const RANGE_CHIPS: { label: string; min: number; max: number }[] = [
   { label: "$1M–$1.5M", min: 1_000_000, max: 1_500_000 },
@@ -13,16 +13,41 @@ const RANGE_CHIPS: { label: string; min: number; max: number }[] = [
   { label: "$3M–$4M", min: 3_000_000, max: 4_000_000 },
 ];
 
+// Group URA's raw property types into buyer-friendly categories. "Apartment"
+// is folded into Condo (they overlap in everyday use).
+function buildTypeGroups(propertyTypes: string[]) {
+  const condo = propertyTypes.filter((t) => /apartment|condominium/i.test(t) && !/executive/i.test(t));
+  const ec = propertyTypes.filter((t) => /executive/i.test(t));
+  const landed = propertyTypes.filter((t) => !condo.includes(t) && !ec.includes(t));
+  return [
+    { id: "condo", label: "Condo / Apartment", types: condo },
+    { id: "landed", label: "Landed", types: landed },
+    { id: "ec", label: "Executive Condo", types: ec },
+  ].filter((g) => g.types.length > 0);
+}
+
 export default function Budget({ meta }: { meta: Meta }) {
   const [minS, setMinS] = useState("1500000");
   const [maxS, setMaxS] = useState("2000000");
-  const [ptype, setPtype] = useState("");
+  const groups = useMemo(() => buildTypeGroups(meta.propertyTypes), [meta.propertyTypes]);
+  const [checked, setChecked] = useState<string[]>([]); // group ids; empty = all
   const [data, setData] = useState<{ rows: BudgetRow[]; total: number; windowMonths: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const min = Number(minS) || 0;
   const max = Number(maxS) || 0;
   const valid = min > 0 && max > min;
+
+  const toggle = (id: string) =>
+    setChecked((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+
+  const typesParam = useMemo(() => {
+    if (!checked.length || checked.length === groups.length) return ""; // all
+    return groups
+      .filter((g) => checked.includes(g.id))
+      .flatMap((g) => g.types)
+      .join("|");
+  }, [checked, groups]);
 
   useEffect(() => {
     if (!valid) {
@@ -32,7 +57,7 @@ export default function Budget({ meta }: { meta: Meta }) {
     let cancelled = false;
     setLoading(true);
     const sp = new URLSearchParams({ min: String(min), max: String(max) });
-    if (ptype) sp.set("propertyType", ptype);
+    if (typesParam) sp.set("types", typesParam);
     const t = setTimeout(() => {
       fetch(`/api/budget?${sp.toString()}`)
         .then((r) => r.json())
@@ -43,7 +68,7 @@ export default function Budget({ meta }: { meta: Meta }) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [valid, min, max, ptype]);
+  }, [valid, min, max, typesParam]);
 
   const rows = data?.rows ?? [];
   const biggest = rows[0];
@@ -63,8 +88,20 @@ export default function Budget({ meta }: { meta: Meta }) {
           <p className="mt-2 text-xs text-clay">&ldquo;To&rdquo; must be higher than &ldquo;From&rdquo;.</p>
         )}
         <div className="mt-3">
-          <Field label="Property type">
-            <Select value={ptype} onChange={setPtype} options={meta.propertyTypes.map((t) => ({ value: t, label: t }))} placeholder="All types" />
+          <Field label="Property type (tick any — none ticked = all)">
+            <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-card-2 px-3 py-2.5">
+              {groups.map((g) => (
+                <label key={g.id} className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+                  <input
+                    type="checkbox"
+                    checked={checked.includes(g.id)}
+                    onChange={() => toggle(g.id)}
+                    className="h-4 w-4 rounded border-line accent-[#b0743a]"
+                  />
+                  {g.label}
+                </label>
+              ))}
+            </div>
           </Field>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -95,7 +132,7 @@ export default function Budget({ meta }: { meta: Meta }) {
         ) : loading && !data ? (
           <div className="py-16"><Spinner /></div>
         ) : rows.length === 0 ? (
-          <Empty>No transactions inside this range{ptype ? ` for ${ptype}s` : ""} in the last 24 months. Widen the range.</Empty>
+          <Empty>No transactions inside this range for the ticked property types in the last 24 months. Widen the range.</Empty>
         ) : (
           <>
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">

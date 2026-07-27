@@ -26,15 +26,10 @@ export default function Compare({ meta }: { meta: Meta }) {
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState("");
 
-  // Seed with a few sensible defaults on first load.
+  // Start empty — the user picks exactly what to compare.
   useEffect(() => {
-    if (mode === "project" && meta.projects.length) {
-      setSelected(meta.projects.slice(0, 3).map((p) => p.name));
-    } else if (mode === "district") {
-      setSelected(meta.districts.slice(0, 3));
-    }
+    setSelected([]);
     setSeries({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   // Fetch any selected series we don't have yet.
