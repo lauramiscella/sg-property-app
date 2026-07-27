@@ -20,6 +20,10 @@ export function applyFilters(txns: Txn[], f: TxnFilter): Txn[] {
     if (f.maxPrice != null && t.price > f.maxPrice) return false;
     if (f.from && t.month < f.from) return false;
     if (f.to && t.month > f.to) return false;
+    // Built-era proxy: lease start year. Freehold has no year in URA data, so a
+    // lease-year filter necessarily excludes freehold caveats.
+    if (f.leaseFrom != null && (t.leaseStartYear == null || t.leaseStartYear < f.leaseFrom)) return false;
+    if (f.leaseTo != null && (t.leaseStartYear == null || t.leaseStartYear > f.leaseTo)) return false;
     return true;
   });
 }
@@ -106,6 +110,192 @@ export function psfTrends(
       };
     })
     .sort((a, b) => a.period.localeCompare(b.period));
+}
+
+// ---- Freehold vs Leasehold premium ------------------------------------------
+export interface TenurePoint {
+  period: string;
+  fhPsf: number | null;
+  lhPsf: number | null;
+  premiumPct: number | null; // (FH - LH) / LH
+  fhVol: number;
+  lhVol: number;
+}
+
+export function tenurePremium(txns: Txn[], groupBy: "quarter" | "year" = "year") {
+  const key = (t: Txn) => (groupBy === "year" ? String(t.year) : t.quarter);
+  const periods = new Map<string, { fh: number[]; lh: number[] }>();
+  for (const t of txns) {
+    const k = key(t);
+    if (!periods.has(k)) periods.set(k, { fh: [], lh: [] });
+    const b = periods.get(k)!;
+    if (t.tenureType === "Freehold") b.fh.push(t.psf);
+    else b.lh.push(t.psf);
+  }
+  const points: TenurePoint[] = Array.from(periods.entries())
+    .map(([period, b]) => {
+      const fhPsf = round(median(b.fh));
+      const lhPsf = round(median(b.lh));
+      return {
+        period,
+        fhPsf,
+        lhPsf,
+        premiumPct: fhPsf && lhPsf ? round(((fhPsf - lhPsf) / lhPsf) * 100, 1) : null,
+        fhVol: b.fh.length,
+        lhVol: b.lh.length,
+      };
+    })
+    .sort((a, b) => a.period.localeCompare(b.period));
+  const withBoth = points.filter((p) => p.premiumPct != null);
+  const latest = withBoth[withBoth.length - 1];
+  return {
+    points,
+    currentPremiumPct: latest?.premiumPct ?? null,
+    avgPremiumPct: withBoth.length ? round(mean(withBoth.map((p) => p.premiumPct!)), 1) : null,
+    latestFhPsf: latest?.fhPsf ?? null,
+    latestLhPsf: latest?.lhPsf ?? null,
+  };
+}
+
+// ---- Size-band profitability -------------------------------------------------
+const SIZE_BANDS: { label: string; max: number }[] = [
+  { label: "≤ 500 sqft", max: 500 },
+  { label: "501–700 sqft", max: 700 },
+  { label: "701–900 sqft", max: 900 },
+  { label: "901–1,200 sqft", max: 1200 },
+  { label: "1,201–1,600 sqft", max: 1600 },
+  { label: "> 1,600 sqft", max: Infinity },
+];
+
+export interface SizeBandRow {
+  band: string;
+  volume: number;
+  medianPsf: number | null;
+  medianPrice: number | null;
+  firstYear: number | null;
+  lastYear: number | null;
+  growthPct: number | null;
+  cagrPct: number | null;
+}
+
+export function sizeBandStats(txns: Txn[]): SizeBandRow[] {
+  return SIZE_BANDS.map((band, i) => {
+    const min = i === 0 ? 0 : SIZE_BANDS[i - 1].max;
+    const list = txns.filter((t) => t.areaSqft > min && t.areaSqft <= band.max);
+    const byYear = new Map<number, number[]>();
+    for (const t of list) (byYear.get(t.year) || byYear.set(t.year, []).get(t.year)!).push(t.psf);
+    const yearly = Array.from(byYear.entries())
+      .map(([year, psfs]) => ({ year, med: median(psfs), n: psfs.length }))
+      .filter((y) => y.n >= 5 && y.med != null)
+      .sort((a, b) => a.year - b.year);
+    const first = yearly[0];
+    const last = yearly[yearly.length - 1];
+    const years = first && last ? last.year - first.year : 0;
+    return {
+      band: band.label,
+      volume: list.length,
+      medianPsf: round(median(list.map((t) => t.psf))),
+      medianPrice: round(median(list.map((t) => t.price))),
+      firstYear: first?.year ?? null,
+      lastYear: last?.year ?? null,
+      growthPct: first && last ? round(((last.med! - first.med!) / first.med!) * 100, 1) : null,
+      cagrPct:
+        first && last && years > 0 ? round((Math.pow(last.med! / first.med!, 1 / years) - 1) * 100, 1) : null,
+    };
+  }).filter((r) => r.volume > 0);
+}
+
+// ---- Budget explorer — "what can I get for $X?" ------------------------------
+export interface BudgetRow {
+  district: string;
+  count: number;
+  medianPrice: number | null;
+  medianSqft: number | null;
+  medianPsf: number | null;
+  topProjects: { name: string; count: number }[];
+}
+
+export function budgetExplorer(
+  txns: Txn[],
+  budget: number,
+  opts: { months?: number; maxMonth?: string; propertyType?: string } = {}
+): { rows: BudgetRow[]; total: number; windowMonths: number } {
+  const months = opts.months ?? 24;
+  let cutoff = "0000-00";
+  if (opts.maxMonth) {
+    const [y, m] = opts.maxMonth.split("-").map(Number);
+    const total = y * 12 + (m - 1) - (months - 1);
+    cutoff = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
+  }
+  const list = txns.filter(
+    (t) =>
+      t.price <= budget &&
+      (!opts.maxMonth || t.month >= cutoff) &&
+      (!opts.propertyType || t.propertyType === opts.propertyType)
+  );
+  const byDistrict = new Map<string, Txn[]>();
+  for (const t of list) (byDistrict.get(t.district) || byDistrict.set(t.district, []).get(t.district)!).push(t);
+  const rows: BudgetRow[] = Array.from(byDistrict.entries())
+    .map(([district, ts]) => {
+      const projCount = new Map<string, number>();
+      for (const t of ts) projCount.set(t.project, (projCount.get(t.project) || 0) + 1);
+      return {
+        district,
+        count: ts.length,
+        medianPrice: round(median(ts.map((t) => t.price))),
+        medianSqft: round(median(ts.map((t) => t.areaSqft))),
+        medianPsf: round(median(ts.map((t) => t.psf))),
+        topProjects: Array.from(projCount.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([name, count]) => ({ name, count })),
+      };
+    })
+    .sort((a, b) => (b.medianSqft ?? 0) - (a.medianSqft ?? 0));
+  return { rows, total: list.length, windowMonths: months };
+}
+
+// ---- District momentum -------------------------------------------------------
+export interface MomentumRow {
+  district: string;
+  psfNow: number | null;
+  psfPrior: number | null;
+  momentumPct: number | null;
+  volNow: number;
+  volPrior: number;
+}
+
+export function districtMomentum(txns: Txn[], maxMonth?: string): MomentumRow[] {
+  if (!maxMonth) return [];
+  const shift = (mm: string, back: number) => {
+    const [y, m] = mm.split("-").map(Number);
+    const t = y * 12 + (m - 1) - back;
+    return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+  };
+  const c12 = shift(maxMonth, 11);
+  const c24 = shift(maxMonth, 23);
+  const byDistrict = new Map<string, { now: number[]; prior: number[] }>();
+  for (const t of txns) {
+    if (!byDistrict.has(t.district)) byDistrict.set(t.district, { now: [], prior: [] });
+    const b = byDistrict.get(t.district)!;
+    if (t.month >= c12) b.now.push(t.psf);
+    else if (t.month >= c24) b.prior.push(t.psf);
+  }
+  return Array.from(byDistrict.entries())
+    .map(([district, b]) => {
+      const psfNow = b.now.length >= 10 ? round(median(b.now)) : null;
+      const psfPrior = b.prior.length >= 10 ? round(median(b.prior)) : null;
+      return {
+        district,
+        psfNow,
+        psfPrior,
+        momentumPct: psfNow && psfPrior ? round(((psfNow - psfPrior) / psfPrior) * 100, 1) : null,
+        volNow: b.now.length,
+        volPrior: b.prior.length,
+      };
+    })
+    .filter((r) => r.momentumPct != null)
+    .sort((a, b) => (b.momentumPct ?? 0) - (a.momentumPct ?? 0));
 }
 
 // ---- "Am I overpaying?" — valuation percentile check ------------------------

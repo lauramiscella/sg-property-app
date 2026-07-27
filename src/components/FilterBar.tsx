@@ -94,19 +94,21 @@ export default function FilterBar({
           />
         </Field>
 
-        <Field label="From (YYYY-MM)">
+        <Field label="Lease from (year ≥)">
           <TextInput
-            value={filters.from || ""}
-            onChange={(v) => set({ from: v || undefined })}
-            placeholder={meta.months?.min || "2020-01"}
+            type="number"
+            value={filters.leaseFrom != null ? String(filters.leaseFrom) : ""}
+            onChange={(v) => set({ leaseFrom: v ? Number(v) : undefined })}
+            placeholder="e.g. 2010"
           />
         </Field>
 
-        <Field label="To (YYYY-MM)">
+        <Field label="Lease to (year ≤)">
           <TextInput
-            value={filters.to || ""}
-            onChange={(v) => set({ to: v || undefined })}
-            placeholder={meta.months?.max || "2026-07"}
+            type="number"
+            value={filters.leaseTo != null ? String(filters.leaseTo) : ""}
+            onChange={(v) => set({ leaseTo: v ? Number(v) : undefined })}
+            placeholder="e.g. 2020"
           />
         </Field>
 
@@ -147,9 +149,15 @@ export default function FilterBar({
         </Field>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <span className="text-xs text-muted">
           {active ? `${active} filter${active > 1 ? "s" : ""} active` : "No filters — whole market"}
+          {(filters.leaseFrom != null || filters.leaseTo != null) && (
+            <span className="ml-2 text-clay">
+              · Lease-year filter uses the lease start year (a built-era proxy) — freehold caveats carry no
+              year in URA data, so they&apos;re excluded while this is set.
+            </span>
+          )}
         </span>
         {active > 0 && (
           <button

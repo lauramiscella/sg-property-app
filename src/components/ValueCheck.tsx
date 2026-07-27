@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Meta, ValuationResult } from "@/lib/analysis";
 import { districtLabel, dShort, fmtSGD, fmtNum } from "@/lib/format";
-import { Card, Field, Select, TextInput, Kpi, Spinner, Empty } from "./ui";
+import { Card, Field, Select, TextInput, Kpi, Spinner, Empty, Ring } from "./ui";
 
 type MatchBy = "project" | "district";
 
@@ -118,14 +118,22 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
             <>
               {verdictCopy && (
                 <div
-                  className="mb-4 rounded-lg border px-4 py-3 text-sm"
+                  className="mb-4 flex items-center gap-4 rounded-2xl border px-4 py-3 text-sm"
                   style={{
                     borderColor: `color-mix(in srgb, var(--color-${verdictCopy.tone}) 35%, transparent)`,
                     background: `color-mix(in srgb, var(--color-${verdictCopy.tone}) 7%, transparent)`,
                     color: `var(--color-${verdictCopy.tone})`,
                   }}
                 >
-                  At <b>{fmtSGD(data.enteredPsf)}</b> psf, this unit is in the <b>{ordinal(data.percentile ?? 0)} percentile</b> — {verdictCopy.text}.
+                  <Ring
+                    pct={data.percentile ?? 0}
+                    color={`var(--color-${verdictCopy.tone})`}
+                    label={ordinal(data.percentile ?? 0)}
+                  />
+                  <span>
+                    At <b>{fmtSGD(data.enteredPsf)}</b> psf, this unit is in the{" "}
+                    <b>{ordinal(data.percentile ?? 0)} percentile</b> of comparable sales — {verdictCopy.text}.
+                  </span>
                 </div>
               )}
 

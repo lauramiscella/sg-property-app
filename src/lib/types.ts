@@ -113,4 +113,6 @@ export interface TxnFilter {
   maxPrice?: number;
   from?: string; // "YYYY-MM"
   to?: string; // "YYYY-MM"
+  leaseFrom?: number; // lease start year (built-era proxy, leasehold only)
+  leaseTo?: number;
 }

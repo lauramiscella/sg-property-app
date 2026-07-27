@@ -12,29 +12,91 @@ import Compare from "./Compare";
 import Premium from "./Premium";
 import ValueCheck from "./ValueCheck";
 import Calculator from "./Calculator";
+import TenurePremium from "./TenurePremium";
+import SizeBands from "./SizeBands";
+import Budget from "./Budget";
+import Momentum from "./Momentum";
 import { Spinner } from "./ui";
 
-type Tab = "psf" | "comps" | "yield" | "appreciation" | "premium" | "value" | "compare" | "calc";
+type View =
+  | "psf" | "compare" | "momentum" | "tenure"
+  | "appreciation" | "yield" | "sizebands" | "comps"
+  | "premium"
+  | "value" | "budget"
+  | "calc";
 
-const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "psf", label: "Price / PSF Trends", hint: "How pricing has moved over time" },
-  { id: "comps", label: "Comparables", hint: "Every matching caveat, filterable" },
-  { id: "yield", label: "Rental Yield", hint: "Gross yield by area & unit type" },
-  { id: "appreciation", label: "Appreciation", hint: "Project-level growth & CAGR" },
-  { id: "premium", label: "New vs Resale", hint: "New-launch premium over resale" },
-  { id: "value", label: "Value Check", hint: "Am I overpaying for this unit?" },
-  { id: "compare", label: "Compare", hint: "Overlay projects & districts side by side" },
-  { id: "calc", label: "Calculator", hint: "Buyer costs & asset-progression math" },
+interface Group {
+  id: string;
+  label: string;
+  color: string;
+  icon: React.ReactNode;
+  views: { id: View; label: string; hint: string }[];
+}
+
+const IP = { width: 15, height: 15, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+const GROUPS: Group[] = [
+  {
+    id: "trends", label: "Trends", color: "var(--color-amber)",
+    icon: <svg {...IP} viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7" /><polyline points="15 7 21 7 21 13" /></svg>,
+    views: [
+      { id: "psf", label: "Market Trends", hint: "Median $PSF and prices over time, for any slice of the market" },
+      { id: "compare", label: "Compare Growth", hint: "Overlay projects or districts to see whose prices grew faster" },
+      { id: "momentum", label: "District Momentum", hint: "Which districts heated up or cooled over the last 12 months" },
+      { id: "tenure", label: "Freehold vs Leasehold", hint: "The premium buyers pay for freehold — and whether it's high or low vs history" },
+    ],
+  },
+  {
+    id: "projects", label: "Projects", color: "var(--color-emerald)",
+    icon: <svg {...IP} viewBox="0 0 24 24"><rect x="4" y="8" width="7" height="12" /><rect x="13" y="4" width="7" height="16" /><line x1="2" y1="20" x2="22" y2="20" /></svg>,
+    views: [
+      { id: "appreciation", label: "Performance", hint: "Each project's price growth since its first recorded year (CAGR)" },
+      { id: "yield", label: "Rental Yield", hint: "What rent brings in versus what units cost, by area and size" },
+      { id: "sizebands", label: "Size Bands", hint: "Do bigger units really appreciate more? PSF and growth by unit size" },
+      { id: "comps", label: "Past Transactions", hint: "Every recorded sale, filterable and exportable — the receipts" },
+    ],
+  },
+  {
+    id: "launches", label: "New Launches", color: "var(--color-plum)",
+    icon: <svg {...IP} viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>,
+    views: [
+      { id: "premium", label: "Launch Premium", hint: "How much more new launches cost vs resale — and whether today's gap is high vs history" },
+    ],
+  },
+  {
+    id: "buyers", label: "Buyers & Sellers", color: "var(--color-gold)",
+    icon: <svg {...IP} viewBox="0 0 24 24"><path d="M3 11l9-8 9 8" /><path d="M5 9v11h14V9" /><path d="M9 20v-6h6v6" /></svg>,
+    views: [
+      { id: "value", label: "Price Check", hint: "Is that asking price fair? See where it sits among recent comparable sales" },
+      { id: "budget", label: "Budget Explorer", hint: "What can I get for $X? Real deals at your budget, district by district" },
+    ],
+  },
+  {
+    id: "calcs", label: "Calculators", color: "var(--color-clay)",
+    icon: <svg {...IP} viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="9" y1="13" x2="9.01" y2="13" /><line x1="12" y1="13" x2="12.01" y2="13" /><line x1="15" y1="13" x2="15.01" y2="13" /><line x1="9" y1="17" x2="9.01" y2="17" /><line x1="12" y1="17" x2="12.01" y2="17" /><line x1="15" y1="17" x2="15.01" y2="17" /></svg>,
+    views: [
+      { id: "calc", label: "Calculators", hint: "Stamp duties, loans, max affordability, upgrade cash flow, breakeven" },
+    ],
+  },
 ];
 
-const NO_FILTER_TABS: Tab[] = ["calc", "compare", "value"];
+const NO_FILTER_VIEWS: View[] = ["calc", "compare", "value", "budget"];
 
 export default function Dashboard() {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [metaLoading, setMetaLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState<TxnFilter>({});
-  const [tab, setTab] = useState<Tab>("psf");
+  const [view, setView] = useState<View>("psf");
+  const [greeting, setGreeting] = useState("Welcome back");
+
+  const group = GROUPS.find((g) => g.views.some((v) => v.id === view))!;
+  const activeView = group.views.find((v) => v.id === view)!;
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  }, []);
 
   const loadMeta = useCallback(async () => {
     setMetaLoading(true);
@@ -60,114 +122,191 @@ export default function Dashboard() {
     }
   };
 
+  const v = activeView.id;
+
   return (
-    <div className="relative z-10 mx-auto w-full max-w-[1220px] px-5 pb-24 pt-6">
-      {/* Header */}
-      <header
-        className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-line px-6 py-5"
-        style={{
-          background:
-            "linear-gradient(135deg, #fff8ec 0%, #fbf0dd 45%, #f4e6d0 100%)",
-        }}
-      >
-        <div>
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{ background: "linear-gradient(135deg, var(--color-plum), var(--color-amber) 55%, var(--color-emerald))" }}
-            />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber">
-              Singapore · Private Residential
-            </span>
+    <div className="relative z-10 flex min-h-screen">
+      {/* Sidebar (desktop) */}
+      <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto border-r border-line bg-card/60 px-4 py-6 lg:flex">
+        <div className="flex items-center gap-2.5 px-2">
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
+            style={{ background: "linear-gradient(135deg, var(--color-plum), var(--color-amber) 60%, var(--color-emerald))" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 9v11h14V9" /></svg>
+          </span>
+          <div>
+            <div className="text-[13px] font-bold leading-tight text-ink">Transaction<br />Intelligence</div>
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-[29px]">
-            Transaction Intelligence
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-ink-soft">
-            URA caveat data across the whole island — price movement, rental yield, project
-            appreciation, comparables, and the buyer maths, in one place.
-          </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          {meta && <SourceBadge meta={meta} />}
-          <button
-            onClick={refresh}
-            disabled={refreshing}
-            className="rounded-lg border border-amber/40 bg-card px-3 py-1.5 text-xs font-medium text-amber shadow-sm transition hover:bg-amber hover:text-white disabled:opacity-50"
-          >
-            {refreshing ? "Refreshing…" : "Refresh data"}
-          </button>
-        </div>
-      </header>
 
-      {meta?.error && (
-        <div className="mt-4 rounded-xl border border-clay/30 bg-clay/5 px-4 py-3 text-sm text-clay">
-          URA fetch reported: {meta.error} — showing cached or sample data instead.
-        </div>
-      )}
-
-      {/* Filters — hidden on tabs that carry their own selection */}
-      {!NO_FILTER_TABS.includes(tab) && (
-        <div className="mt-6">
-          {metaLoading || !meta ? (
-            <div className="rounded-2xl border border-line bg-card px-5 py-6">
-              <Spinner label="Loading dataset…" />
+        <nav className="mt-7 flex flex-col gap-5">
+          {GROUPS.map((g) => (
+            <div key={g.id}>
+              <div className="flex items-center gap-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: g.color }}>
+                {g.icon}
+                {g.label}
+              </div>
+              <div className="mt-1.5 flex flex-col gap-0.5">
+                {g.views.map((sv) => {
+                  const active = sv.id === view;
+                  return (
+                    <button
+                      key={sv.id}
+                      onClick={() => setView(sv.id)}
+                      className="rounded-lg px-3 py-1.5 text-left text-[13px] font-medium transition"
+                      style={
+                        active
+                          ? { background: `color-mix(in srgb, ${g.color} 14%, transparent)`, color: g.color, fontWeight: 700 }
+                          : { color: "var(--color-ink-soft)" }
+                      }
+                    >
+                      {sv.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <FilterBar meta={meta} filters={filters} onChange={setFilters} />
-          )}
+          ))}
+        </nav>
+
+        <div className="mt-auto pt-6">
+          <div className="rounded-2xl border border-line bg-card-2 px-3.5 py-3 text-[11px] leading-relaxed text-muted">
+            <span className="font-semibold text-amber">Official URA data</span> — caveats refresh every
+            Tue &amp; Fri. Research tool, not formal advice.
+          </div>
         </div>
-      )}
+      </aside>
 
-      {/* Tabs */}
-      <nav className="mt-6 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`relative -mb-px rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition ${
-              tab === t.id
-                ? "text-ink"
-                : "text-muted hover:text-ink-soft"
-            }`}
-          >
-            {t.label}
-            {tab === t.id && (
-              <span
-                className="absolute inset-x-2 -bottom-px h-[3px] rounded-full"
-                style={{ background: "linear-gradient(90deg, var(--color-amber), var(--color-plum))" }}
-              />
+      {/* Main */}
+      <div className="min-w-0 flex-1">
+        <div className="mx-auto w-full max-w-[1080px] px-5 pb-24 pt-6">
+          {/* Greeting header */}
+          <header className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-[22px] font-bold tracking-tight text-ink">
+                {greeting}! <span className="align-middle">🏠</span>
+              </h1>
+              <p className="mt-0.5 text-sm text-muted">
+                Singapore private residential, from official URA caveats — here&apos;s the market today.
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {meta && <SourceBadge meta={meta} />}
+              <button
+                onClick={refresh}
+                disabled={refreshing}
+                className="rounded-lg border border-amber/40 bg-card px-3 py-1.5 text-xs font-medium text-amber shadow-sm transition hover:bg-amber hover:text-white disabled:opacity-50"
+              >
+                {refreshing ? "Refreshing…" : "Refresh data"}
+              </button>
+            </div>
+          </header>
+
+          {meta?.error && (
+            <div className="mt-4 rounded-xl border border-clay/30 bg-clay/5 px-4 py-3 text-sm text-clay">
+              URA fetch reported: {meta.error} — showing cached or sample data instead.
+            </div>
+          )}
+
+          {/* Mobile nav */}
+          <nav className="mt-5 flex flex-wrap gap-2 lg:hidden">
+            {GROUPS.map((g) => {
+              const active = g.id === group.id;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => setView(g.views[0].id)}
+                  className="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition"
+                  style={active ? { background: g.color, borderColor: g.color, color: "#fffdf8" } : { background: "var(--color-card)", borderColor: "var(--color-line)", color: g.color }}
+                >
+                  {g.icon}
+                  {g.label}
+                </button>
+              );
+            })}
+          </nav>
+          {group.views.length > 1 && (
+            <div className="mt-2 flex lg:hidden">
+              <div className="inline-flex flex-wrap rounded-lg border border-line bg-card-2 p-0.5">
+                {group.views.map((sv) => (
+                  <button
+                    key={sv.id}
+                    onClick={() => setView(sv.id)}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${sv.id === view ? "bg-card shadow-sm" : "text-muted"}`}
+                    style={sv.id === view ? { color: group.color } : undefined}
+                  >
+                    {sv.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* View title + hint */}
+          <div className="mt-5 flex items-center gap-2.5">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-white"
+              style={{ background: group.color }}
+            >
+              {group.icon}
+            </span>
+            <div>
+              <h2 className="text-[16px] font-bold text-ink">{activeView.label}</h2>
+              <p className="text-xs text-muted">{activeView.hint}</p>
+            </div>
+          </div>
+
+          {/* Filters */}
+          {!NO_FILTER_VIEWS.includes(v) && (
+            <div className="mt-4">
+              {metaLoading || !meta ? (
+                <div className="rounded-2xl border border-line bg-card px-5 py-6">
+                  <Spinner label="Loading dataset…" />
+                </div>
+              ) : (
+                <FilterBar meta={meta} filters={filters} onChange={setFilters} />
+              )}
+            </div>
+          )}
+
+          {/* Panel */}
+          <main className="mt-5">
+            {!meta ? null : v === "psf" ? (
+              <PsfTrends filters={filters} meta={meta} onFiltersChange={setFilters} />
+            ) : v === "comps" ? (
+              <Comparables filters={filters} meta={meta} onFiltersChange={setFilters} />
+            ) : v === "yield" ? (
+              <RentalYield filters={filters} meta={meta} />
+            ) : v === "appreciation" ? (
+              <Appreciation filters={filters} />
+            ) : v === "sizebands" ? (
+              <SizeBands filters={filters} />
+            ) : v === "momentum" ? (
+              <Momentum filters={filters} />
+            ) : v === "tenure" ? (
+              <TenurePremium filters={filters} />
+            ) : v === "premium" ? (
+              <Premium filters={filters} />
+            ) : v === "value" ? (
+              <ValueCheck meta={meta} />
+            ) : v === "budget" ? (
+              <Budget meta={meta} />
+            ) : v === "compare" ? (
+              <Compare meta={meta} />
+            ) : (
+              <Calculator />
             )}
-          </button>
-        ))}
-      </nav>
+          </main>
 
-      {/* Panel */}
-      <main className="mt-6">
-        {!meta ? null : tab === "psf" ? (
-          <PsfTrends filters={filters} />
-        ) : tab === "comps" ? (
-          <Comparables filters={filters} />
-        ) : tab === "yield" ? (
-          <RentalYield filters={filters} meta={meta} />
-        ) : tab === "appreciation" ? (
-          <Appreciation filters={filters} />
-        ) : tab === "premium" ? (
-          <Premium filters={filters} />
-        ) : tab === "value" ? (
-          <ValueCheck meta={meta} />
-        ) : tab === "compare" ? (
-          <Compare meta={meta} />
-        ) : (
-          <Calculator />
-        )}
-      </main>
-
-      <footer className="mt-16 border-t border-line pt-5 text-xs text-muted">
-        Source: Urban Redevelopment Authority (URA) private residential caveats. Figures are as
-        lodged and can revise. PSF uses net price where a caveat records one. This tool is for
-        research, not formal valuation or advice.
-      </footer>
+          <footer className="mt-16 border-t border-line pt-5 text-xs text-muted">
+            Source: Urban Redevelopment Authority (URA) private residential caveats. Figures are as lodged and can
+            revise. PSF uses net price where a caveat records one. URA publishes roughly the last 5 years; this app
+            keeps older months as they age out, so its archive grows over time. This tool is for research, not formal
+            valuation or advice.
+          </footer>
+        </div>
+      </div>
     </div>
   );
 }

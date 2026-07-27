@@ -2,16 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { Txn, TxnFilter } from "@/lib/types";
-import { ComparablesResult } from "@/lib/analysis";
+import { ComparablesResult, Meta } from "@/lib/analysis";
 import { toQuery } from "@/lib/query";
 import { fmtNum, fmtSGD, districtLabel, dShort } from "@/lib/format";
 import { Card, Kpi, Spinner, Empty, SegmentBadge } from "./ui";
+import TimeRange from "./TimeRange";
 
 const PAGE_SIZE = 50;
 
 type SortKey = "date" | "price" | "psf" | "areaSqft";
 
-export default function Comparables({ filters }: { filters: TxnFilter }) {
+export default function Comparables({
+  filters,
+  meta,
+  onFiltersChange,
+}: {
+  filters: TxnFilter;
+  meta: Meta;
+  onFiltersChange: (f: TxnFilter) => void;
+}) {
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -112,13 +121,16 @@ export default function Comparables({ filters }: { filters: TxnFilter }) {
       title="Matching transactions"
       subtitle={data ? `${fmtNum(data.total)} caveats match your filters` : "—"}
       right={
-        <button
-          onClick={exportCsv}
-          disabled={exporting || !data?.total}
-          className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-amber hover:text-amber disabled:opacity-50"
-        >
-          {exporting ? "Preparing…" : "Export CSV"}
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <TimeRange meta={meta} filters={filters} onChange={onFiltersChange} />
+          <button
+            onClick={exportCsv}
+            disabled={exporting || !data?.total}
+            className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-amber hover:text-amber disabled:opacity-50"
+          >
+            {exporting ? "Preparing…" : "Export CSV"}
+          </button>
+        </div>
       }
     >
       {data && data.total > 0 && (

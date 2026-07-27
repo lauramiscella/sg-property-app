@@ -57,7 +57,11 @@ async function load(force = false): Promise<Dataset> {
   }
 
   try {
-    const ds = await fetchDataset(accessKey);
+    const fresh = await fetchDataset(accessKey);
+    // ACCUMULATE: URA only serves ~5 years back. Merge with any previously
+    // cached data so months URA drops off are retained and history grows.
+    const prior = await readDisk();
+    const ds = prior && prior.source === "URA" ? mergeDatasets(prior, fresh) : fresh;
     memory = ds;
     await writeDisk(ds);
     return ds;
@@ -89,4 +93,31 @@ export async function getDataset(): Promise<Dataset> {
 export async function refreshDataset(): Promise<Dataset> {
   memory = null;
   return load(true);
+}
+
+// Merge a fresh URA pull into the accumulated history. Caveats have no ID, so
+// dedupe on a composite of the fields that uniquely describe a lodged caveat.
+function mergeDatasets(prior: Dataset, fresh: Dataset): Dataset {
+  const txnKey = (t: Dataset["txns"][number]) =>
+    `${t.project}|${t.contractDate}|${t.price}|${t.areaSqm}|${t.floorRange ?? ""}|${t.saleType}`;
+  const rentKey = (r: Dataset["rentals"][number]) =>
+    `${r.project}|${r.leaseDate}|${r.rent}|${r.areaSqftMid ?? ""}|${r.bedrooms ?? ""}`;
+
+  const txnMap = new Map(prior.txns.map((t) => [txnKey(t), t]));
+  for (const t of fresh.txns) txnMap.set(txnKey(t), t); // fresh wins on collision
+  const rentMap = new Map(prior.rentals.map((r) => [rentKey(r), r]));
+  for (const r of fresh.rentals) rentMap.set(rentKey(r), r);
+
+  // Reassign ids — each pull numbers from 0, so merged sets would collide.
+  const txns = Array.from(txnMap.values()).map((t, i) => ({ ...t, id: `t${i}` }));
+  const rentals = Array.from(rentMap.values()).map((r, i) => ({ ...r, id: `r${i}` }));
+  const months = txns.map((t) => t.month).sort();
+  return {
+    txns,
+    rentals,
+    source: "URA",
+    fetchedAt: fresh.fetchedAt,
+    transactionMonths: months.length ? { min: months[0], max: months[months.length - 1] } : null,
+    rentalQuarters: Array.from(new Set(rentals.map((r) => r.quarter))).sort(),
+  };
 }

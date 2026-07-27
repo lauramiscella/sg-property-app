@@ -16,5 +16,7 @@ export function parseFilter(sp: URLSearchParams): TxnFilter {
     maxPrice: num(sp.get("maxPrice")),
     from: str(sp.get("from")),
     to: str(sp.get("to")),
+    leaseFrom: num(sp.get("leaseFrom")),
+    leaseTo: num(sp.get("leaseTo")),
   };
 }

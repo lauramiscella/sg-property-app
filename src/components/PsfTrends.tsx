@@ -13,15 +13,24 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TxnFilter } from "@/lib/types";
-import { TrendPoint } from "@/lib/analysis";
+import { TrendPoint, Meta } from "@/lib/analysis";
 import { toQuery } from "@/lib/query";
 import { useApi } from "@/lib/useApi";
 import { fmtNum, fmtSGD, fmtPct } from "@/lib/format";
 import { Card, Kpi, Segmented, Spinner, Empty } from "./ui";
+import TimeRange from "./TimeRange";
 
 type GroupBy = "quarter" | "year" | "month";
 
-export default function PsfTrends({ filters }: { filters: TxnFilter }) {
+export default function PsfTrends({
+  filters,
+  meta,
+  onFiltersChange,
+}: {
+  filters: TxnFilter;
+  meta: Meta;
+  onFiltersChange: (f: TxnFilter) => void;
+}) {
   const [groupBy, setGroupBy] = useState<GroupBy>("quarter");
   const url = `/api/psf-trends${toQuery(filters, { groupBy })}`;
   const { data, loading } = useApi<{ points: TrendPoint[]; count: number }>(url);
@@ -55,15 +64,18 @@ export default function PsfTrends({ filters }: { filters: TxnFilter }) {
         title="Median price psf over time"
         subtitle={`${fmtNum(data?.count ?? 0)} caveats in view · shaded band = 25th–75th percentile`}
         right={
-          <Segmented<GroupBy>
-            value={groupBy}
-            onChange={setGroupBy}
-            options={[
-              { value: "quarter", label: "Quarterly" },
-              { value: "year", label: "Yearly" },
-              { value: "month", label: "Monthly" },
-            ]}
-          />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <TimeRange meta={meta} filters={filters} onChange={onFiltersChange} />
+            <Segmented<GroupBy>
+              value={groupBy}
+              onChange={setGroupBy}
+              options={[
+                { value: "quarter", label: "Quarterly" },
+                { value: "year", label: "Yearly" },
+                { value: "month", label: "Monthly" },
+              ]}
+            />
+          </div>
         }
       >
         {loading ? (
@@ -81,6 +93,7 @@ export default function PsfTrends({ filters }: { filters: TxnFilter }) {
                   value={fmtSGD(kpis.latest.medianPsf)}
                   sub={kpis.latest.period}
                   accent="amber"
+                  icon={<KIcon d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />}
                 />
                 <Kpi
                   label="Year-on-year"
@@ -88,6 +101,7 @@ export default function PsfTrends({ filters }: { filters: TxnFilter }) {
                   tone={kpis.yoy != null ? (kpis.yoy >= 0 ? "up" : "down") : "default"}
                   sub="vs same period last year"
                   accent={kpis.yoy != null && kpis.yoy < 0 ? "brick" : "emerald"}
+                  icon={<KIcon d="M3 17l6-6 4 4 8-8M15 7h6v6" />}
                 />
                 <Kpi
                   label="Growth over window"
@@ -95,8 +109,15 @@ export default function PsfTrends({ filters }: { filters: TxnFilter }) {
                   tone={kpis.totalGrowth != null ? (kpis.totalGrowth >= 0 ? "up" : "down") : "default"}
                   sub={`${points[0].period} → ${points[points.length - 1].period}`}
                   accent="plum"
+                  icon={<KIcon d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />}
                 />
-                <Kpi label="Total volume" value={fmtNum(kpis.volume)} sub="caveats" accent="gold" />
+                <Kpi
+                  label="Total volume"
+                  value={fmtNum(kpis.volume)}
+                  sub="caveats"
+                  accent="gold"
+                  icon={<KIcon d="M4 20V10M10 20V4M16 20v-7M22 20H2" />}
+                />
               </div>
             )}
 
@@ -174,6 +195,14 @@ export default function PsfTrends({ filters }: { filters: TxnFilter }) {
         )}
       </Card>
     </div>
+  );
+}
+
+function KIcon({ d }: { d: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
   );
 }
 

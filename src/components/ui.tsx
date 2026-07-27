@@ -50,25 +50,67 @@ export function Kpi({
   sub,
   tone = "default",
   accent,
+  icon,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
   tone?: "default" | "up" | "down";
   accent?: Accent;
+  icon?: ReactNode;
 }) {
   const toneClass = tone === "up" ? "text-emerald" : tone === "down" ? "text-brick" : "text-ink";
-  const barColor = accent ? ACCENT_VAR[accent] : "var(--color-line-strong)";
+  const c = accent ? ACCENT_VAR[accent] : "var(--color-line-strong)";
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-line bg-card-2 px-4 py-3 pl-[15px]"
-      style={{ boxShadow: `inset 3px 0 0 ${barColor}` }}
+      className="rounded-2xl border px-4 py-3"
+      style={{
+        background: accent ? `color-mix(in srgb, ${c} 7%, var(--color-card))` : "var(--color-card-2)",
+        borderColor: accent ? `color-mix(in srgb, ${c} 22%, transparent)` : "var(--color-line)",
+      }}
     >
-      <div className="text-[11px] uppercase tracking-wide" style={accent ? { color: barColor } : { color: "var(--color-muted)" }}>
-        {label}
+      <div className="flex items-center gap-2">
+        {icon && (
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: c }}
+          >
+            {icon}
+          </span>
+        )}
+        <span className="text-[11px] font-semibold uppercase tracking-wide" style={accent ? { color: c } : { color: "var(--color-muted)" }}>
+          {label}
+        </span>
       </div>
-      <div className={`mt-1 text-xl font-semibold tabular-nums ${toneClass}`}>{value}</div>
+      <div className={`mt-1.5 text-xl font-semibold tabular-nums ${toneClass}`}>{value}</div>
       {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
+    </div>
+  );
+}
+
+// Small circular progress ring (inspiration: soft dashboard donuts).
+export function Ring({ pct, color, label }: { pct: number; color: string; label?: string }) {
+  const r = 26;
+  const circ = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="relative inline-flex h-[72px] w-[72px] items-center justify-center">
+      <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
+        <circle cx="36" cy="36" r={r} fill="none" stroke="var(--color-line)" strokeWidth="7" />
+        <circle
+          cx="36"
+          cy="36"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeDasharray={`${(clamped / 100) * circ} ${circ}`}
+        />
+      </svg>
+      <span className="absolute text-sm font-bold tabular-nums" style={{ color }}>
+        {label ?? `${Math.round(clamped)}%`}
+      </span>
     </div>
   );
 }
