@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* Warm base with jewel-tone accents — professional, never cold blue/teal. */
+@theme {
+  --color-paper: #f5efe3;
+  --color-card: #fffdf8;
+  --color-card-2: #faf4e9;
+  --color-ink: #2a241d;
+  --color-ink-soft: #4e463b;
+  --color-muted: #8c8375;
+  --color-line: #e8dfce;
+  --color-line-strong: #d8ccb7;
+
+  /* Accent family */
+  --color-amber: #b0743a;
+  --color-amber-soft: #cf9d60;
+  --color-gold: #cf9a3a;
+  --color-clay: #b0543a;
+  --color-brick: #a8442f;
+  --color-emerald: #3f7d57;
+  --color-emerald-soft: #6aa07f;
+  --color-plum: #8f4a5e;
+  --color-olive: #7c8a44;
+  --color-sage: #6a7f57;
+
+  /* Market-segment identity */
+  --color-ccr: #8f4a5e; /* prime / central — plum */
+  --color-rcr: #b0743a; /* city fringe — amber */
+  --color-ocr: #3f7d57; /* suburban — emerald */
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Subtle film grain over the whole surface for the still-life cinematic feel. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-amber-soft);
+  color: #fff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 8px;
+}
