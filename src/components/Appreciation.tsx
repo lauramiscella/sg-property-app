@@ -33,16 +33,16 @@ export default function Appreciation({ filters }: { filters: TxnFilter }) {
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[660px] text-sm">
+            <table className="w-full sm:min-w-[660px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Project</th>
-                  <th className="px-3 py-2.5 font-medium">Window</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Entry PSF</th>
+                  <th className="hidden px-3 py-2.5 font-medium sm:table-cell">Window</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Entry PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Latest PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Total growth</th>
                   <th className="px-3 py-2.5 text-right font-medium">CAGR</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Caveats</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Caveats</th>
                 </tr>
               </thead>
               <tbody>
@@ -63,10 +63,10 @@ export default function Appreciation({ filters }: { filters: TxnFilter }) {
                             {districtLabel(r.district)} · {r.tenureType}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-ink-soft">
+                        <td className="hidden whitespace-nowrap px-3 py-2.5 text-ink-soft sm:table-cell">
                           {r.firstYear}–{r.lastYear}
                         </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
+                        <td className="hidden px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">
                           {fmtSGD(r.firstPsf)}
                         </td>
                         <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
@@ -86,7 +86,7 @@ export default function Appreciation({ filters }: { filters: TxnFilter }) {
                         >
                           {fmtPct(r.cagrPct)}
                         </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-muted">
+                        <td className="hidden px-3 py-2.5 text-right tabular-nums text-muted sm:table-cell">
                           {fmtNum(r.totalVolume)}
                         </td>
                       </tr>

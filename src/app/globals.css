@@ -37,11 +37,37 @@ html,
 body {
   background: var(--color-paper);
   color: var(--color-ink);
-  overflow-x: clip; /* nothing should push the page sideways on mobile */
   /* Stop iOS Safari's automatic text inflation, which enlarges text and
      pushes layouts wider than the screen (content gets cut off). */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* On phones, tables compress to fit the screen instead of scrolling sideways. */
+@media (max-width: 640px) {
+  table {
+    font-size: 12px;
+  }
+  th,
+  td {
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+}
+
+/* Branded PDF export via the browser's print engine. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  body::before {
+    display: none; /* no film grain on paper */
+  }
+  tr,
+  .rounded-2xl,
+  .rounded-xl {
+    break-inside: avoid;
+  }
 }
 
 body {

@@ -62,7 +62,7 @@ export default function Absorption({ meta }: { meta: Meta }) {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,300px)_1fr]">
-      <Card title="Your inputs" subtitle="Count active listings on the portal yourself, enter the number — the rest is computed from URA sales.">
+      <Card className="print:hidden" title="Your inputs" subtitle="Count active listings on the portal yourself, enter the number — the rest is computed from URA sales.">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Field label="Match against">

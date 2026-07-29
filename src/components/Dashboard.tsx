@@ -157,9 +157,9 @@ export default function Dashboard() {
   const v = activeView.id;
 
   return (
-    <div className="relative z-10 flex min-h-screen">
+    <div className="relative z-10 flex min-h-screen overflow-x-clip">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto border-r border-line bg-card/60 px-4 py-6 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto border-r border-line bg-card/60 px-4 py-6 lg:flex print:hidden">
         <div className="flex items-center gap-2.5 px-2">
           <span
             className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
@@ -215,7 +215,7 @@ export default function Dashboard() {
         <div className="mx-auto w-full max-w-[1080px] px-5 pb-24 pt-6">
           {/* Header — banner sits BEHIND text on desktop, BELOW text on mobile (no overlap) */}
           <header
-            className="relative flex min-h-0 flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5 md:min-h-[150px]"
+            className="relative flex min-h-0 flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line px-6 py-5 md:min-h-[150px] print:hidden"
             style={{ backgroundColor: "#f5e9cf" }}
           >
             {/* desktop-only background artwork + cream wash for legibility */}
@@ -264,7 +264,7 @@ export default function Dashboard() {
           </header>
 
           {/* Quick starts — always visible so the main journeys are one tap away */}
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 print:hidden">
             {QUICK_STARTS.map((q) => {
               const active = view === q.view;
               return (
@@ -300,7 +300,7 @@ export default function Dashboard() {
           )}
 
           {/* Mobile nav */}
-          <nav className="mt-5 flex flex-wrap gap-2 lg:hidden">
+          <nav className="mt-5 flex flex-wrap gap-2 lg:hidden print:hidden">
             {GROUPS.map((g) => {
               const active = g.id === group.id;
               return (
@@ -308,7 +308,16 @@ export default function Dashboard() {
                   key={g.id}
                   onClick={() => setView(g.views[0].id)}
                   className="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition"
-                  style={active ? { background: g.color, borderColor: g.color, color: "#fffdf8" } : { background: "var(--color-card)", borderColor: "var(--color-line)", color: g.color }}
+                  style={
+                    active
+                      ? {
+                          background: `linear-gradient(135deg, ${g.color}, color-mix(in srgb, ${g.color} 72%, #3a2c1a))`,
+                          borderColor: g.color,
+                          color: "#fffdf8",
+                          boxShadow: `0 6px 14px -6px color-mix(in srgb, ${g.color} 65%, transparent)`,
+                        }
+                      : { background: "var(--color-card)", borderColor: "var(--color-line)", color: g.color }
+                  }
                 >
                   {g.icon}
                   {g.label}
@@ -317,7 +326,7 @@ export default function Dashboard() {
             })}
           </nav>
           {group.views.length > 1 && (
-            <div className="mt-2 flex lg:hidden">
+            <div className="mt-2 flex lg:hidden print:hidden">
               <div className="inline-flex flex-wrap rounded-lg border border-line bg-card-2 p-0.5">
                 {group.views.map((sv) => (
                   <button
@@ -334,22 +343,46 @@ export default function Dashboard() {
           )}
 
           {/* View title + hint */}
-          <div className="mt-5 flex items-center gap-2.5">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
             <span
               className="flex h-8 w-8 items-center justify-center rounded-xl text-white"
-              style={{ background: group.color }}
+              style={{
+                background: `linear-gradient(135deg, ${group.color}, color-mix(in srgb, ${group.color} 70%, #3a2c1a))`,
+                boxShadow: `0 5px 12px -5px color-mix(in srgb, ${group.color} 70%, transparent)`,
+              }}
             >
               {group.icon}
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <h2 className="text-[16px] font-bold text-ink">{activeView.label}</h2>
               <p className="text-xs text-muted">{activeView.hint}</p>
             </div>
+            {v !== "calc" && (
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft shadow-sm transition hover:border-amber hover:text-amber print:hidden"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
+                Export PDF
+              </button>
+            )}
+          </div>
+
+          {/* Print-only branded header for PDF exports */}
+          <div className="mb-4 hidden border-b-2 border-amber pb-3 print:block">
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-bold text-ink">Transaction Intelligence — {activeView.label}</span>
+              <span className="text-xs text-muted">{new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}</span>
+            </div>
+            <p className="mt-1 text-xs text-ink-soft">
+              Prepared by Sharol Pek · CEA Reg. No. R060616F · Source: URA private residential caveats (last 5 years) ·
+              Estimates for discussion, not formal advice or valuation.
+            </p>
           </div>
 
           {/* Filters */}
           {!NO_FILTER_VIEWS.includes(v) && (
-            <div className="mt-4">
+            <div className="mt-4 print:hidden">
               {metaLoading || !meta ? (
                 <div className="rounded-2xl border border-line bg-card px-5 py-6">
                   <Spinner label="Loading dataset…" />

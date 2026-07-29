@@ -139,15 +139,15 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
       {rows.length > 0 && (
         <Card title="Yield table" subtitle="Sorted by gross yield. Segments need ≥2 rent and ≥2 sale caveats.">
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[460px] text-sm">
+            <table className="w-full sm:min-w-[460px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Segment</th>
                   <th className="px-3 py-2.5 font-medium">Unit band</th>
                   <th className="px-3 py-2.5 text-right font-medium">Median rent /mo</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Median price</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Median price</th>
                   <th className="px-3 py-2.5 text-right font-medium">Gross yield</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Samples (R/S)</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Samples (R/S)</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,13 +160,13 @@ export default function RentalYield({ filters, meta }: { filters: TxnFilter; met
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                       {fmtSGD(r.medianMonthlyRent)}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
+                    <td className="hidden px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">
                       {fmtSGD(r.medianPrice)}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-amber">
                       {fmtPct(r.grossYieldPct)}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-muted">
+                    <td className="hidden px-3 py-2.5 text-right tabular-nums text-muted sm:table-cell">
                       {fmtNum(r.rentSamples)}/{fmtNum(r.saleSamples)}
                     </td>
                   </tr>

@@ -17,7 +17,11 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgba(70,55,35,0.04),0_8px_24px_-16px_rgba(70,55,35,0.18)] ${className}`}
+      className={`rounded-2xl border border-line bg-card ${className}`}
+      style={{
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 2px rgba(70,55,35,0.05), 0 10px 22px -14px rgba(70,55,35,0.28), 0 24px 48px -32px rgba(70,55,35,0.25)",
+      }}
     >
       {(title || right) && (
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-4 pb-3 border-b border-line">
@@ -25,7 +29,7 @@ export function Card({
             {title && <h3 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h3>}
             {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
           </div>
-          {right && <div className="min-w-0 max-w-full">{right}</div>}
+          {right && <div className="min-w-0 max-w-full print:hidden">{right}</div>}
         </div>
       )}
       <div className="p-5">{children}</div>
@@ -63,10 +67,15 @@ export function Kpi({
   const c = accent ? ACCENT_VAR[accent] : "var(--color-line-strong)";
   return (
     <div
-      className="rounded-2xl border px-4 py-3"
+      className="rounded-2xl border px-4 py-3 transition-transform hover:-translate-y-0.5"
       style={{
-        background: accent ? `color-mix(in srgb, ${c} 7%, var(--color-card))` : "var(--color-card-2)",
-        borderColor: accent ? `color-mix(in srgb, ${c} 22%, transparent)` : "var(--color-line)",
+        background: accent
+          ? `linear-gradient(160deg, color-mix(in srgb, ${c} 14%, #ffffff) 0%, color-mix(in srgb, ${c} 5%, var(--color-card)) 70%)`
+          : "var(--color-card-2)",
+        borderColor: accent ? `color-mix(in srgb, ${c} 28%, transparent)` : "var(--color-line)",
+        boxShadow: accent
+          ? `inset 0 1px 0 rgba(255,255,255,0.75), 0 8px 18px -10px color-mix(in srgb, ${c} 50%, transparent)`
+          : "inset 0 1px 0 rgba(255,255,255,0.6)",
       }}
     >
       <div className="flex items-center gap-2">

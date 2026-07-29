@@ -60,7 +60,7 @@ export default function ValueCheck({ meta }: { meta: Meta }) {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,330px)_1fr]">
-      <Card title="Check a unit" subtitle="Enter a size and an asking price to see where it sits vs recent comparables.">
+      <Card className="print:hidden" title="Check a unit" subtitle="Enter a size and an asking price to see where it sits vs recent comparables.">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Field label="Match against">

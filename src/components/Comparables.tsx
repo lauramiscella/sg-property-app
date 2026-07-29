@@ -150,18 +150,20 @@ export default function Comparables({
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[480px] text-sm">
+            <table className="w-full sm:min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <Th onClick={() => toggleSort("date")} active={sort === "date"} dir={dir}>
                     Date
                   </Th>
                   <th className="px-3 py-2.5 font-medium">Project</th>
-                  <th className="px-3 py-2.5 font-medium">District</th>
-                  <th className="px-3 py-2.5 font-medium">Type / Sale</th>
-                  <ThRight onClick={() => toggleSort("areaSqft")} active={sort === "areaSqft"} dir={dir}>
-                    Size
-                  </ThRight>
+                  <th className="hidden px-3 py-2.5 font-medium sm:table-cell">District</th>
+                  <th className="hidden px-3 py-2.5 font-medium sm:table-cell">Type / Sale</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">
+                    <button onClick={() => toggleSort("areaSqft")} className={`inline-flex items-center gap-1 ${sort === "areaSqft" ? "text-amber" : ""}`}>
+                      Size{sort === "areaSqft" && <span>{dir === "asc" ? "▲" : "▼"}</span>}
+                    </button>
+                  </th>
                   <ThRight onClick={() => toggleSort("price")} active={sort === "price"} dir={dir}>
                     Price
                   </ThRight>
@@ -180,14 +182,15 @@ export default function Comparables({
                         {r.street} · <SegmentBadge seg={String(r.marketSegment)} /> ·{" "}
                         {r.tenureType}
                         {r.floorRange ? ` · flr ${r.floorRange}` : ""}
+                        <span className="sm:hidden"> · {fmtNum(r.areaSqft)} sqft</span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-ink-soft">{dShort(r.district)}</td>
-                    <td className="px-3 py-2.5 text-ink-soft">
+                    <td className="hidden whitespace-nowrap px-3 py-2.5 text-ink-soft sm:table-cell">{dShort(r.district)}</td>
+                    <td className="hidden px-3 py-2.5 text-ink-soft sm:table-cell">
                       <div>{r.propertyType}</div>
                       <div className="text-xs text-muted">{r.saleType}</div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink-soft">
+                    <td className="hidden whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">
                       {fmtNum(r.areaSqft)} sqft
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums font-medium text-ink">

@@ -63,12 +63,12 @@ export default function SizeBands({ filters }: { filters: TxnFilter }) {
             </ResponsiveContainer>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[480px] text-sm">
+            <table className="w-full sm:min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Size band</th>
                   <th className="px-3 py-2.5 text-right font-medium">Caveats</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Median price</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Median price</th>
                   <th className="px-3 py-2.5 text-right font-medium">Median PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Growth</th>
                   <th className="px-3 py-2.5 text-right font-medium">CAGR</th>
@@ -82,7 +82,7 @@ export default function SizeBands({ filters }: { filters: TxnFilter }) {
                       {r.band}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.volume)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPrice)}</td>
+                    <td className="hidden px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">{fmtSGD(r.medianPrice)}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPsf)}</td>
                     <td className={`px-3 py-2.5 text-right tabular-nums font-medium ${(r.growthPct ?? 0) >= 0 ? "text-emerald" : "text-brick"}`}>
                       {r.growthPct != null ? `${fmtPct(r.growthPct)} (${r.firstYear}–${r.lastYear})` : "—"}

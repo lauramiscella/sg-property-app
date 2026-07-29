@@ -519,7 +519,7 @@ function Breakeven() {
           subtitle="What your home must be worth that year to walk away without losing money."
         >
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[460px] text-sm">
+            <table className="w-full sm:min-w-[460px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Sell in</th>

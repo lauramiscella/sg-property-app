@@ -82,7 +82,7 @@ export default function Budget({ meta }: { meta: Meta }) {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,300px)_1fr]">
-      <Card title="Your budget range" subtitle="Only deals inside this exact range are counted.">
+      <Card className="print:hidden" title="Your budget range" subtitle="Only deals inside this exact range are counted.">
         <div className="grid grid-cols-2 gap-3">
           <Field label="From (SGD)">
             <TextInput type="number" value={minS} onChange={setMinS} placeholder="e.g. 1500000" />
@@ -204,26 +204,32 @@ function BudgetTable({
         <Empty>No {tag.toLowerCase()} transactions inside this range in the last {windowMonths} months.</Empty>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[620px] text-sm">
+          <table className="w-full sm:min-w-[620px] text-sm">
             <thead>
               <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                 <th className="px-3 py-2.5 font-medium">District</th>
                 <th className="px-3 py-2.5 text-right font-medium">Deals</th>
                 <th className="px-3 py-2.5 text-right font-medium">Median size</th>
                 <th className="px-3 py-2.5 text-right font-medium">Median price</th>
-                <th className="px-3 py-2.5 font-medium">Where it happened</th>
+                <th className="hidden px-3 py-2.5 font-medium md:table-cell">Where it happened</th>
               </tr>
             </thead>
             <tbody>
               {bucket.rows.map((r) => (
                 <tr key={r.district} className="border-b border-line/60 last:border-0 hover:bg-card-2">
-                  <td className="px-3 py-2.5 font-medium text-ink">{districtLabel(r.district)}</td>
+                  <td className="px-3 py-2.5 font-medium text-ink">
+                    {districtLabel(r.district)}
+                    <div className="text-[10.5px] font-normal text-muted md:hidden">
+                      {r.topProjects.slice(0, 2).map((p) => p.name).join(" · ")}
+                      {r.totalProjects > 2 ? ` +${r.totalProjects - 2}` : ""}
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.count)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-emerald">
                     {r.medianSqft ? `${fmtNum(r.medianSqft)} sqft` : "—"}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPrice)}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted">
+                  <td className="hidden px-3 py-2.5 text-xs text-muted md:table-cell">
                     {r.topProjects.map((p) => `${p.name} (${p.count})`).join(" · ")}
                     {r.totalProjects > r.topProjects.length && (
                       <span className="text-amber"> +{r.totalProjects - r.topProjects.length} more</span>

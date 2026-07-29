@@ -235,12 +235,12 @@ export default function Compare({ meta }: { meta: Meta }) {
           subtitle="Standardised to the last 5 years, so every selection is compared over the same period. CAGR = the average growth per year, compounded — e.g. 6% CAGR means prices grew about 6% every year on average."
         >
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[540px] text-sm">
+            <table className="w-full sm:min-w-[540px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">Selection</th>
-                  <th className="px-3 py-2.5 font-medium">Window</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Entry PSF</th>
+                  <th className="hidden px-3 py-2.5 font-medium sm:table-cell">Window</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Entry PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Latest PSF</th>
                   <th className="px-3 py-2.5 text-right font-medium">Total growth</th>
                   <th className="px-3 py-2.5 text-right font-medium">Avg growth / yr (CAGR)</th>
@@ -254,8 +254,8 @@ export default function Compare({ meta }: { meta: Meta }) {
                       <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: t.color }} />
                       <span className="font-medium text-ink">{t.label}</span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-ink-soft">{t.window}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(t.firstPsf)}</td>
+                    <td className="hidden whitespace-nowrap px-3 py-2.5 text-ink-soft sm:table-cell">{t.window}</td>
+                    <td className="hidden px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">{fmtSGD(t.firstPsf)}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(t.lastPsf)}</td>
                     <td className={`px-3 py-2.5 text-right tabular-nums font-medium ${(t.growth ?? 0) >= 0 ? "text-emerald" : "text-brick"}`}>{fmtPct(t.growth)}</td>
                     <td className={`px-3 py-2.5 text-right tabular-nums font-semibold ${(t.cagr ?? 0) >= 0 ? "text-emerald" : "text-brick"}`}>{fmtPct(t.cagr)}</td>

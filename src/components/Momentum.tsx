@@ -65,12 +65,12 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
             </ResponsiveContainer>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[540px] text-sm">
+            <table className="w-full sm:min-w-[540px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-card-2 text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2.5 font-medium">District</th>
                   <th className="px-3 py-2.5 text-right font-medium">PSF now (12mo)</th>
-                  <th className="px-3 py-2.5 text-right font-medium">PSF prior (12mo)</th>
+                  <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">PSF prior (12mo)</th>
                   <th className="px-3 py-2.5 text-right font-medium">Momentum</th>
                   <th className="px-3 py-2.5 text-right font-medium">Volume now/prior</th>
                 </tr>
@@ -80,7 +80,7 @@ export default function Momentum({ filters }: { filters: TxnFilter }) {
                   <tr key={r.district} className="border-b border-line/60 last:border-0 hover:bg-card-2">
                     <td className="px-3 py-2.5 font-medium text-ink">{districtLabel(r.district)}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.psfNow)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.psfPrior)}</td>
+                    <td className="hidden px-3 py-2.5 text-right tabular-nums text-ink-soft sm:table-cell">{fmtSGD(r.psfPrior)}</td>
                     <td className={`px-3 py-2.5 text-right tabular-nums font-semibold ${(r.momentumPct ?? 0) >= 0 ? "text-emerald" : "text-brick"}`}>{fmtPct(r.momentumPct)}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.volNow)}/{fmtNum(r.volPrior)}</td>
                   </tr>
