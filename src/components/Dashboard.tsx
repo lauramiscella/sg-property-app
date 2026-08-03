@@ -19,6 +19,10 @@ import Momentum from "./Momentum";
 import Absorption from "./Absorption";
 import { Spinner } from "./ui";
 
+// Optional "get full access" link shown on the trial banner (e.g. a wa.me
+// WhatsApp link). Set NEXT_PUBLIC_CONTACT_URL in Vercel; hidden if unset.
+const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL || "";
+
 type View =
   | "psf" | "momentum" | "tenure"
   | "appreciation" | "yield" | "sizebands" | "comps"
@@ -246,13 +250,15 @@ export default function Dashboard() {
             </div>
             <div className="relative flex flex-col items-start gap-2 rounded-xl p-2 md:items-end md:bg-[#f5e9cf]/90">
               {meta && <SourceBadge meta={meta} />}
-              <button
-                onClick={refresh}
-                disabled={refreshing}
-                className="rounded-lg border border-amber/40 bg-card px-3 py-1.5 text-xs font-medium text-amber shadow-sm transition hover:bg-amber hover:text-white disabled:opacity-50"
-              >
-                {refreshing ? "Refreshing…" : "Refresh data"}
-              </button>
+              {meta?.access !== "trial" && (
+                <button
+                  onClick={refresh}
+                  disabled={refreshing}
+                  className="rounded-lg border border-amber/40 bg-card px-3 py-1.5 text-xs font-medium text-amber shadow-sm transition hover:bg-amber hover:text-white disabled:opacity-50"
+                >
+                  {refreshing ? "Refreshing…" : "Refresh data"}
+                </button>
+              )}
             </div>
             {/* mobile-only: banner shown below the text, full width, never overlapping */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -262,6 +268,8 @@ export default function Dashboard() {
               className="relative -mx-1 mt-1 w-full rounded-xl md:hidden"
             />
           </header>
+
+          {meta?.access === "trial" && <TrialBanner meta={meta} />}
 
           {/* Quick starts — always visible so the main journeys are one tap away */}
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 print:hidden">
@@ -375,7 +383,8 @@ export default function Dashboard() {
               <span className="text-xs text-muted">{new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}</span>
             </div>
             <p className="mt-1 text-xs text-ink-soft">
-              Prepared by Sharol Pek · CEA Reg. No. R060616F · Source: URA private residential caveats (last 5 years) ·
+              Prepared by Sharol Pek · CEA Reg. No. R060616F · Source: URA private residential caveats
+              {meta?.access === "trial" ? " (trial view — last 12 months)" : " (last 5 years)"} ·
               Estimates for discussion, not formal advice or valuation.
             </p>
           </div>
@@ -446,6 +455,95 @@ export default function Dashboard() {
           </footer>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TrialBanner({ meta }: { meta: Meta }) {
+  const [showCode, setShowCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [state, setState] = useState<"idle" | "checking" | "wrong">("idle");
+
+  const unlock = async () => {
+    if (!code.trim()) return;
+    setState("checking");
+    try {
+      const res = await fetch("/api/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (res.ok) window.location.reload();
+      else setState("wrong");
+    } catch {
+      setState("wrong");
+    }
+  };
+
+  return (
+    <div
+      className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-5 py-4 print:hidden"
+      style={{
+        borderColor: "color-mix(in srgb, var(--color-gold) 45%, transparent)",
+        background: "linear-gradient(135deg, color-mix(in srgb, var(--color-gold) 14%, var(--color-card)), color-mix(in srgb, var(--color-amber) 7%, var(--color-card)))",
+      }}
+    >
+      <div className="min-w-[240px] flex-1">
+        <div className="text-[13px] font-bold text-ink">
+          Free preview — last {meta.trialMonths ?? 12} months of URA data, capped results.
+        </div>
+        <p className="mt-0.5 text-xs text-ink-soft">
+          The full version covers up to 5 years of transactions, every district, project names and full exports.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {CONTACT_URL && (
+          <a
+            href={CONTACT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, var(--color-amber), var(--color-gold))" }}
+          >
+            Message Sharol for full access
+          </a>
+        )}
+        {!showCode ? (
+          <button
+            onClick={() => setShowCode(true)}
+            className="rounded-lg border border-line bg-card px-3 py-2 text-xs font-medium text-ink-soft transition hover:border-amber hover:text-amber"
+          >
+            Have an access code?
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (state === "wrong") setState("idle");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && unlock()}
+              placeholder="Access code"
+              autoFocus
+              className={`w-[130px] rounded-lg border bg-card px-2.5 py-2 text-xs text-ink outline-none transition focus:border-amber ${state === "wrong" ? "border-brick" : "border-line"}`}
+            />
+            <button
+              onClick={unlock}
+              disabled={state === "checking" || !code.trim()}
+              className="rounded-lg border border-amber bg-amber px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {state === "checking" ? "…" : "Unlock"}
+            </button>
+          </div>
+        )}
+      </div>
+      {state === "wrong" && (
+        <p className="w-full text-right text-[11px] font-medium text-brick">
+          That code isn&apos;t right — check with Sharol.
+        </p>
+      )}
     </div>
   );
 }

@@ -58,6 +58,10 @@ export interface Meta {
   tenureTypes: string[];
   projects: { name: string; district: string; count: number }[];
   error?: string;
+  // access gating (set by /api/meta, not buildMeta)
+  access?: "full" | "trial";
+  trialFrom?: string;
+  trialMonths?: number;
 }
 
 export function buildMeta(ds: Dataset): Meta {
@@ -230,12 +234,18 @@ export interface BudgetRow {
   topProjects: { name: string; count: number }[];
 }
 
+export interface BudgetResult {
+  rows: BudgetRow[];
+  total: number;
+  windowMonths: number;
+}
+
 export function budgetExplorer(
   txns: Txn[],
   budgetMin: number,
   budgetMax: number,
   opts: { months?: number; maxMonth?: string; propertyTypes?: string[] } = {}
-): { rows: BudgetRow[]; total: number; windowMonths: number } {
+): BudgetResult {
   const months = opts.months ?? 24;
   let cutoff = "0000-00";
   if (opts.maxMonth) {

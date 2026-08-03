@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
-import { getDataset } from "@/lib/store";
+import { getAccessDataset, TRIAL_MONTHS } from "@/lib/access";
 import { buildMeta } from "@/lib/analysis";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const ds = await getDataset();
-  return NextResponse.json(buildMeta(ds));
+  const ds = await getAccessDataset();
+  return NextResponse.json({
+    ...buildMeta(ds),
+    access: ds.full ? "full" : "trial",
+    trialFrom: ds.trialFrom,
+    trialMonths: TRIAL_MONTHS,
+  });
 }

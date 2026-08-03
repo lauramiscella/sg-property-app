@@ -13,12 +13,15 @@ const RANGE_CHIPS: { label: string; min: number; max: number }[] = [
   { label: "$3M–$4M", min: 3_000_000, max: 4_000_000 },
 ];
 
+type LockableRow = BudgetRow & { projectsLocked?: boolean };
 interface Bucket {
-  rows: BudgetRow[];
+  rows: LockableRow[];
   total: number;
+  lockedDistricts?: number; // trial: districts hidden beyond the shown ones
 }
 interface ApiResult {
   windowMonths: number;
+  access?: "full" | "trial";
   resale: Bucket;
   newSale: Bucket;
 }
@@ -220,8 +223,14 @@ function BudgetTable({
                   <td className="px-3 py-2.5 font-medium text-ink">
                     {districtLabel(r.district)}
                     <div className="text-[10.5px] font-normal text-muted md:hidden">
-                      {r.topProjects.slice(0, 2).map((p) => p.name).join(" · ")}
-                      {r.totalProjects > 2 ? ` +${r.totalProjects - 2}` : ""}
+                      {r.projectsLocked ? (
+                        <span className="text-amber">🔒 {fmtNum(r.totalProjects)} projects — full version</span>
+                      ) : (
+                        <>
+                          {r.topProjects.slice(0, 2).map((p) => p.name).join(" · ")}
+                          {r.totalProjects > 2 ? ` +${r.totalProjects - 2}` : ""}
+                        </>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{fmtNum(r.count)}</td>
@@ -230,13 +239,27 @@ function BudgetTable({
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">{fmtSGD(r.medianPrice)}</td>
                   <td className="hidden px-3 py-2.5 text-xs text-muted md:table-cell">
-                    {r.topProjects.map((p) => `${p.name} (${p.count})`).join(" · ")}
-                    {r.totalProjects > r.topProjects.length && (
-                      <span className="text-amber"> +{r.totalProjects - r.topProjects.length} more</span>
+                    {r.projectsLocked ? (
+                      <span className="text-amber">🔒 {fmtNum(r.totalProjects)} projects — unlock to see names</span>
+                    ) : (
+                      <>
+                        {r.topProjects.map((p) => `${p.name} (${p.count})`).join(" · ")}
+                        {r.totalProjects > r.topProjects.length && (
+                          <span className="text-amber"> +{r.totalProjects - r.topProjects.length} more</span>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
               ))}
+              {(bucket.lockedDistricts ?? 0) > 0 && (
+                <tr className="border-t border-line/60 bg-card-2/60">
+                  <td colSpan={5} className="px-3 py-2.5 text-xs font-medium text-amber">
+                    🔒 +{fmtNum(bucket.lockedDistricts!)} more district{bucket.lockedDistricts === 1 ? "" : "s"} with
+                    deals in this range — shown in the full version.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDataset } from "@/lib/store";
+import { getAccessDataset } from "@/lib/access";
 import { rentalYield } from "@/lib/analysis";
 import { parseFilter } from "@/lib/params";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const ds = await getDataset();
+  const ds = await getAccessDataset();
   const level = (sp.get("level") || "district") as "district" | "project";
   return NextResponse.json({
     level,

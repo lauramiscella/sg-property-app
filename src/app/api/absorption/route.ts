@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDataset } from "@/lib/store";
+import { getAccessDataset } from "@/lib/access";
 import { applyFilters, absorption } from "@/lib/analysis";
 import { parseFilter } from "@/lib/params";
 export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const ds = await getDataset();
+  const ds = await getAccessDataset();
   const filtered = applyFilters(ds.txns, parseFilter(sp));
   const listings = Number(sp.get("listings") || 0);
   const dedupePct = Number(sp.get("dedupe") || 20);

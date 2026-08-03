@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDataset } from "@/lib/store";
+import { getAccessDataset } from "@/lib/access";
 import { applyFilters, sizeBandStats } from "@/lib/analysis";
 import { parseFilter } from "@/lib/params";
 export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const ds = await getDataset();
+  const ds = await getAccessDataset();
   const filter = parseFilter(sp);
   // Optional recent window (e.g. last 12 months) computed from the dataset's latest month.
   const months = Number(sp.get("months") || 0);
