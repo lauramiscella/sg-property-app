@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const ds = await getAccessDataset();
+  if (!ds.full) return NextResponse.json({ locked: true }, { status: 403 }); // full version only
   const filtered = applyFilters(ds.txns, parseFilter(sp));
   const listings = Number(sp.get("listings") || 0);
   const dedupePct = Number(sp.get("dedupe") || 20);

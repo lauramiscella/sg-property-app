@@ -7,7 +7,7 @@ import { Txn } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 // Trial cap: at most this many rows are ever served (browsing or CSV export).
-const TRIAL_ROW_CAP = 400;
+const TRIAL_ROW_CAP = 5;
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;

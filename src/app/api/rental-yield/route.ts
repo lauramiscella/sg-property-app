@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const ds = await getAccessDataset();
+  if (!ds.full) return NextResponse.json({ locked: true }, { status: 403 }); // full version only
   const level = (sp.get("level") || "district") as "district" | "project";
   return NextResponse.json({
     level,

@@ -46,6 +46,7 @@ export default function Comparables({
   }, [filters, sort, dir, page]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const trial = meta.access === "trial";
 
   const toggleSort = (k: SortKey) => {
     if (sort === k) setDir(dir === "asc" ? "desc" : "asc");
@@ -123,13 +124,15 @@ export default function Comparables({
       right={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <TimeRange meta={meta} filters={filters} onChange={onFiltersChange} />
-          <button
-            onClick={exportCsv}
-            disabled={exporting || !data?.total}
-            className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-amber hover:text-amber disabled:opacity-50"
-          >
-            {exporting ? "Preparing…" : "Export CSV"}
-          </button>
+          {!trial && (
+            <button
+              onClick={exportCsv}
+              disabled={exporting || !data?.total}
+              className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-amber hover:text-amber disabled:opacity-50"
+            >
+              {exporting ? "Preparing…" : "Export CSV"}
+            </button>
+          )}
         </div>
       }
     >
@@ -205,19 +208,26 @@ export default function Comparables({
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-muted">
-              Page {data?.page ?? 1} of {totalPages} · showing {district(filters)}
-            </span>
-            <div className="flex gap-2">
-              <PageBtn disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                ← Prev
-              </PageBtn>
-              <PageBtn disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                Next →
-              </PageBtn>
+          {trial ? (
+            <p className="mt-4 text-xs font-medium text-amber">
+              🔒 Free preview shows the 5 most recent of {fmtNum(data?.total ?? 0)} matching caveats — the full
+              version shows every transaction, sortable and exportable.
+            </p>
+          ) : (
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-muted">
+                Page {data?.page ?? 1} of {totalPages} · showing {district(filters)}
+              </span>
+              <div className="flex gap-2">
+                <PageBtn disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  ← Prev
+                </PageBtn>
+                <PageBtn disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                  Next →
+                </PageBtn>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </Card>

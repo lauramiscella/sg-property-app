@@ -17,6 +17,7 @@ import SizeBands from "./SizeBands";
 import Budget from "./Budget";
 import Momentum from "./Momentum";
 import Absorption from "./Absorption";
+import BentoHome from "./BentoHome";
 import { Spinner } from "./ui";
 
 // Optional "get full access" link shown on the trial banner (e.g. a wa.me
@@ -24,6 +25,7 @@ import { Spinner } from "./ui";
 const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL || "";
 
 type View =
+  | "home"
   | "psf" | "momentum" | "tenure"
   | "appreciation" | "yield" | "sizebands" | "comps"
   | "premium"
@@ -85,7 +87,11 @@ const GROUPS: Group[] = [
   },
 ];
 
-const NO_FILTER_VIEWS: View[] = ["calc", "value", "budget", "absorption"];
+const NO_FILTER_VIEWS: View[] = ["home", "calc", "value", "budget", "absorption"];
+
+// Views that are completely locked for trial visitors (server refuses the
+// data too — this list only controls the UI).
+const LOCKED_VIEWS: View[] = ["momentum", "tenure", "appreciation", "yield", "sizebands", "premium", "value", "absorption"];
 
 // Only the filters that make sense for each view — everything else is hidden.
 const VIEW_FILTERS: Partial<Record<View, FilterField[]>> = {
@@ -129,10 +135,10 @@ export default function Dashboard() {
   const [metaLoading, setMetaLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState<TxnFilter>({});
-  const [view, setView] = useState<View>("psf");
+  const [view, setView] = useState<View>("home");
 
-  const group = GROUPS.find((g) => g.views.some((v) => v.id === view))!;
-  const activeView = group.views.find((v) => v.id === view)!;
+  const group = GROUPS.find((g) => g.views.some((sv) => sv.id === view)) ?? null;
+  const activeView = group?.views.find((sv) => sv.id === view) ?? null;
 
   const loadMeta = useCallback(async () => {
     setMetaLoading(true);
@@ -158,7 +164,9 @@ export default function Dashboard() {
     }
   };
 
-  const v = activeView.id;
+  const v = view;
+  const trial = meta?.access === "trial";
+  const isLocked = (id: View) => trial && LOCKED_VIEWS.includes(id);
 
   return (
     <div className="relative z-10 flex min-h-screen overflow-x-clip">
@@ -177,6 +185,18 @@ export default function Dashboard() {
         </div>
 
         <nav className="mt-7 flex flex-col gap-5">
+          <button
+            onClick={() => setView("home")}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-semibold transition"
+            style={
+              view === "home"
+                ? { background: "color-mix(in srgb, var(--color-amber) 14%, transparent)", color: "var(--color-amber)" }
+                : { color: "var(--color-ink-soft)" }
+            }
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>
+            Home
+          </button>
           {GROUPS.map((g) => (
             <div key={g.id}>
               <div className="flex items-center gap-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: g.color }}>
@@ -198,6 +218,7 @@ export default function Dashboard() {
                       }
                     >
                       {sv.label}
+                      {isLocked(sv.id) && <span className="ml-1 text-[10px] opacity-70">🔒</span>}
                     </button>
                   );
                 })}
@@ -271,7 +292,8 @@ export default function Dashboard() {
 
           {meta?.access === "trial" && <TrialBanner meta={meta} />}
 
-          {/* Quick starts — always visible so the main journeys are one tap away */}
+          {/* Quick starts — on inner views only (the Home tiles cover this on Home) */}
+          {view !== "home" && (
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 print:hidden">
             {QUICK_STARTS.map((q) => {
               const active = view === q.view;
@@ -291,7 +313,10 @@ export default function Dashboard() {
                   >
                     {q.icon}
                   </span>
-                  <div className="mt-2 text-[13px] font-bold leading-snug text-ink">{q.title}</div>
+                  <div className="mt-2 text-[13px] font-bold leading-snug text-ink">
+                    {q.title}
+                    {isLocked(q.view) && <span className="ml-1 text-[11px] opacity-70">🔒</span>}
+                  </div>
                   <div className="mt-0.5 hidden text-[11px] leading-snug text-muted sm:block">{q.desc}</div>
                   <div className="mt-1.5 text-[11px] font-semibold" style={{ color: q.color }}>
                     {active ? "You're here" : <>Open <span className="inline-block transition group-hover:translate-x-0.5">→</span></>}
@@ -300,6 +325,7 @@ export default function Dashboard() {
               );
             })}
           </div>
+          )}
 
           {meta?.error && (
             <div className="mt-4 rounded-xl border border-clay/30 bg-clay/5 px-4 py-3 text-sm text-clay">
@@ -309,8 +335,24 @@ export default function Dashboard() {
 
           {/* Mobile nav */}
           <nav className="mt-5 flex flex-wrap gap-2 lg:hidden print:hidden">
+            <button
+              onClick={() => setView("home")}
+              className="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition"
+              style={
+                view === "home"
+                  ? {
+                      background: "linear-gradient(135deg, var(--color-amber), color-mix(in srgb, var(--color-amber) 72%, #3a2c1a))",
+                      borderColor: "var(--color-amber)",
+                      color: "#fffdf8",
+                    }
+                  : { background: "var(--color-card)", borderColor: "var(--color-line)", color: "var(--color-amber)" }
+              }
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>
+              Home
+            </button>
             {GROUPS.map((g) => {
-              const active = g.id === group.id;
+              const active = g.id === group?.id;
               return (
                 <button
                   key={g.id}
@@ -333,7 +375,7 @@ export default function Dashboard() {
               );
             })}
           </nav>
-          {group.views.length > 1 && (
+          {group && group.views.length > 1 && (
             <div className="mt-2 flex lg:hidden print:hidden">
               <div className="inline-flex flex-wrap rounded-lg border border-line bg-card-2 p-0.5">
                 {group.views.map((sv) => (
@@ -344,13 +386,15 @@ export default function Dashboard() {
                     style={sv.id === view ? { color: group.color } : undefined}
                   >
                     {sv.label}
+                    {isLocked(sv.id) && <span className="ml-1 text-[10px] opacity-70">🔒</span>}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* View title + hint */}
+          {/* View title + hint (not on Home — the tiles speak for themselves) */}
+          {group && activeView && (
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
             <span
               className="flex h-8 w-8 items-center justify-center rounded-xl text-white"
@@ -365,7 +409,7 @@ export default function Dashboard() {
               <h2 className="text-[16px] font-bold text-ink">{activeView.label}</h2>
               <p className="text-xs text-muted">{activeView.hint}</p>
             </div>
-            {v !== "calc" && (
+            {v !== "calc" && !trial && (
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft shadow-sm transition hover:border-amber hover:text-amber print:hidden"
@@ -375,11 +419,12 @@ export default function Dashboard() {
               </button>
             )}
           </div>
+          )}
 
           {/* Print-only branded header for PDF exports */}
           <div className="mb-4 hidden border-b-2 border-amber pb-3 print:block">
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-bold text-ink">Transaction Intelligence — {activeView.label}</span>
+              <span className="text-lg font-bold text-ink">Transaction Intelligence — {activeView?.label ?? "Overview"}</span>
               <span className="text-xs text-muted">{new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}</span>
             </div>
             <p className="mt-1 text-xs text-ink-soft">
@@ -390,7 +435,7 @@ export default function Dashboard() {
           </div>
 
           {/* Filters */}
-          {!NO_FILTER_VIEWS.includes(v) && (
+          {!NO_FILTER_VIEWS.includes(v) && !isLocked(v) && (
             <div className="mt-4 print:hidden">
               {metaLoading || !meta ? (
                 <div className="rounded-2xl border border-line bg-card px-5 py-6">
@@ -404,7 +449,11 @@ export default function Dashboard() {
 
           {/* Panel */}
           <main className="mt-5">
-            {!meta ? null : v === "psf" ? (
+            {!meta ? null : v === "home" ? (
+              <BentoHome trial={trial} onOpen={(x) => setView(x as View)} />
+            ) : isLocked(v) ? (
+              <LockedPanel label={activeView?.label ?? ""} />
+            ) : v === "psf" ? (
               <PsfTrends filters={filters} meta={meta} onFiltersChange={setFilters} />
             ) : v === "comps" ? (
               <Comparables filters={filters} meta={meta} onFiltersChange={setFilters} />
@@ -455,6 +504,38 @@ export default function Dashboard() {
           </footer>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LockedPanel({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-card px-6 py-14 text-center">
+      <span
+        className="flex h-12 w-12 items-center justify-center rounded-2xl text-white"
+        style={{ background: "linear-gradient(135deg, var(--color-amber), var(--color-gold))" }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="11" width="16" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 018 0v4" />
+        </svg>
+      </span>
+      <div className="text-[15px] font-bold text-ink">{label} is in the full version</div>
+      <p className="max-w-md text-sm text-ink-soft">
+        The free preview covers Market Trends, Budget Explorer, Past Transactions and the Calculators.
+        This tool — with up to 5 years of URA data behind it — opens with an access code.
+      </p>
+      {CONTACT_URL && (
+        <a
+          href={CONTACT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, var(--color-amber), var(--color-gold))" }}
+        >
+          Message Sharol for full access
+        </a>
+      )}
     </div>
   );
 }
