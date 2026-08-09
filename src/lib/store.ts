@@ -16,6 +16,43 @@ const MAX_AGE_MS = 1000 * 60 * 60 * 12; // refresh at most twice a day
 let memory: Dataset | null = null;
 let inflight: Promise<Dataset> | null = null;
 
+// ---- Vercel Blob persistence (optional) -------------------------------------
+// If a Blob store is connected (BLOB_READ_WRITE_TOKEN present), the dataset is
+// also saved there. Cold serverless starts then load from Blob in well under a
+// second instead of blocking the first visitor on a full URA pull — and the
+// accumulating archive survives redeploys. Without the token these are no-ops.
+const BLOB_KEY = "sg-property/dataset.json";
+const hasBlob = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+
+async function readBlob(): Promise<Dataset | null> {
+  if (!hasBlob()) return null;
+  try {
+    const { list } = await import("@vercel/blob");
+    const { blobs } = await list({ prefix: BLOB_KEY, limit: 1 });
+    if (!blobs.length) return null;
+    const res = await fetch(blobs[0].url, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as Dataset;
+  } catch {
+    return null;
+  }
+}
+
+async function writeBlob(ds: Dataset): Promise<void> {
+  if (!hasBlob()) return;
+  try {
+    const { put } = await import("@vercel/blob");
+    await put(BLOB_KEY, JSON.stringify(ds), {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+  } catch {
+    // Non-fatal — Blob is a cache layer, not the source of truth.
+  }
+}
+
 async function readDisk(): Promise<Dataset | null> {
   try {
     const raw = await fs.readFile(CACHE_FILE, "utf8");
@@ -48,6 +85,12 @@ async function load(force = false): Promise<Dataset> {
       memory = disk;
       return disk;
     }
+    const blob = await readBlob();
+    if (blob && !isStale(blob)) {
+      memory = blob;
+      await writeDisk(blob);
+      return blob;
+    }
   }
 
   if (!accessKey) {
@@ -60,17 +103,18 @@ async function load(force = false): Promise<Dataset> {
     const fresh = await fetchDataset(accessKey);
     // ACCUMULATE: URA only serves ~5 years back. Merge with any previously
     // cached data so months URA drops off are retained and history grows.
-    const prior = await readDisk();
+    const prior = (await readDisk()) ?? (await readBlob());
     const ds = prior && prior.source === "URA" ? mergeDatasets(prior, fresh) : fresh;
     memory = ds;
     await writeDisk(ds);
+    await writeBlob(ds);
     return ds;
   } catch (err) {
     // If a refresh fails, prefer any cached real data before falling back.
-    const disk = await readDisk();
-    if (disk) {
-      memory = disk;
-      return disk;
+    const cached = (await readDisk()) ?? (await readBlob());
+    if (cached) {
+      memory = cached;
+      return cached;
     }
     const sample = buildSampleDataset();
     (sample as Dataset & { error?: string }).error =
@@ -81,7 +125,29 @@ async function load(force = false): Promise<Dataset> {
 }
 
 export async function getDataset(): Promise<Dataset> {
+  // Fresh in memory — instant.
   if (memory && !isStale(memory)) return memory;
+
+  // Not in memory yet (cold start): pull from the cheap caches first.
+  if (!memory) {
+    const cached = (await readDisk()) ?? (await readBlob());
+    if (cached) memory = cached;
+  }
+
+  // SERVE-STALE-INSTANTLY: if we have ANY real data, return it now and let a
+  // background refresh bring it up to date. A visitor never waits on URA.
+  if (memory) {
+    if (isStale(memory) && !inflight) {
+      inflight = load(true)
+        .catch(() => memory as Dataset)
+        .finally(() => {
+          inflight = null;
+        });
+    }
+    return memory;
+  }
+
+  // Truly nothing cached anywhere (first boot ever) — block on the first pull.
   if (!inflight) {
     inflight = load().finally(() => {
       inflight = null;
