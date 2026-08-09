@@ -395,7 +395,7 @@ export default function Dashboard() {
 
           {/* View title + hint (not on Home — the tiles speak for themselves) */}
           {group && activeView && (
-          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5 print:hidden">
             <span
               className="flex h-8 w-8 items-center justify-center rounded-xl text-white"
               style={{
@@ -421,17 +421,27 @@ export default function Dashboard() {
           </div>
           )}
 
-          {/* Print-only branded header for PDF exports */}
+          {/* Print-only: standardized branded header for every PDF export */}
           <div className="mb-4 hidden border-b-2 border-amber pb-3 print:block">
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-bold text-ink">Transaction Intelligence — {activeView?.label ?? "Overview"}</span>
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-amber">sharol.ai</span>
               <span className="text-xs text-muted">{new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}</span>
             </div>
+            <div className="mt-0.5 text-lg font-bold text-ink">Transaction Intelligence — {activeView?.label ?? "Overview"}</div>
             <p className="mt-1 text-xs text-ink-soft">
               Prepared by Sharol Pek · CEA Reg. No. R060616F · Source: URA private residential caveats
               {meta?.access === "trial" ? " (trial view — last 12 months)" : " (last 5 years)"} ·
               Estimates for discussion, not formal advice or valuation.
             </p>
+          </div>
+
+          {/* Print-only: faint diagonal watermark + slim running footer, repeated on every page */}
+          <div className="print-watermark" aria-hidden>
+            @sharol.ai
+          </div>
+          <div className="print-footer" aria-hidden>
+            <span>@sharol.ai · Sharol Pek · CEA Reg. No. R060616F</span>
+            <span>URA data · estimates only, not formal advice</span>
           </div>
 
           {/* Filters */}

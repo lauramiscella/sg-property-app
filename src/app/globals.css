@@ -56,6 +56,14 @@ body {
 }
 
 /* Branded PDF export via the browser's print engine. */
+/* Print branding: hidden on screen, repeated on every printed page (fixed
+   elements repeat per page when printing). Watermark sits ON TOP of content
+   at very low opacity so card backgrounds can't cover it — subtle by design. */
+.print-watermark,
+.print-footer {
+  display: none;
+}
+
 @media print {
   body {
     background: #fff !important;
@@ -63,10 +71,45 @@ body {
   body::before {
     display: none; /* no film grain on paper */
   }
-  tr,
-  .rounded-2xl,
-  .rounded-xl {
+  /* Keep rows and KPI tiles whole, but let tall cards/tables flow across
+     pages — otherwise a long table gets pushed to its own page and leaves
+     big blank gaps. */
+  tr {
     break-inside: avoid;
+  }
+  .print-watermark {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-27deg);
+    font-size: 72px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: rgba(139, 106, 58, 0.055);
+    pointer-events: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-footer {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid #e8dfce;
+    padding-top: 3px;
+    font-size: 8.5px;
+    color: #8c8375;
+    background: #fff;
+  }
+  main {
+    padding-bottom: 26px; /* keep the last lines clear of the running footer */
   }
 }
 
