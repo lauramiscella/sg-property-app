@@ -173,6 +173,27 @@ function LockedBody({ label }: { label: string }) {
   );
 }
 
+// Shown while the numbers are still on their way. Must never look like a lock —
+// a slow first load used to render the locked state by mistake.
+function LoadingBody() {
+  return (
+    <div className="mt-1">
+      <div className="h-[21px] w-24 animate-pulse rounded-md bg-line/70" />
+      <div className="mt-1.5 h-[11px] w-32 animate-pulse rounded bg-line/50" />
+    </div>
+  );
+}
+
+// Loaded, not locked, but the slice genuinely has too few caveats to compute.
+function ThinDataBody({ label }: { label: string }) {
+  return (
+    <div className="mt-1">
+      <div className="text-[15px] font-bold text-ink-soft">—</div>
+      <div className="mt-0.5 text-[11px] text-muted">{label}</div>
+    </div>
+  );
+}
+
 function OpenHint({ color }: { color: string }) {
   return (
     <div className="mt-2 text-[11px] font-semibold" style={{ color }}>
@@ -194,10 +215,26 @@ export default function BentoHome({
   useEffect(() => {
     if (fetched.current) return;
     fetched.current = true;
-    fetch("/api/gadgets")
-      .then((r) => r.json())
-      .then(setG)
-      .catch(() => {});
+    let cancelled = false;
+    // One retry: a cold serverless start can drop the very first call, and a
+    // silent failure used to leave the tiles stuck looking locked until the
+    // visitor refreshed the page.
+    const load = async (attempt = 0): Promise<void> => {
+      try {
+        const res = await fetch("/api/gadgets");
+        if (!res.ok) throw new Error(String(res.status));
+        const json = await res.json();
+        if (!cancelled) setG(json);
+      } catch {
+        if (attempt < 1 && !cancelled) {
+          setTimeout(() => load(attempt + 1), 1500);
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const C = {
@@ -261,8 +298,12 @@ export default function BentoHome({
       {/* Hottest district */}
       <Tile onClick={() => onOpen("momentum")} color={C.emerald} locked={trial}>
         <TileLabel color={C.emerald}>Hottest district</TileLabel>
-        {trial || !g?.hotDistrict ? (
-          <LockedBody label={g && !trial ? "Not enough data" : "See which district leads"} />
+        {trial ? (
+          <LockedBody label="See which district leads" />
+        ) : !g ? (
+          <LoadingBody />
+        ) : !g.hotDistrict ? (
+          <ThinDataBody label="Not enough recent caveats" />
         ) : (
           <div className="mt-1">
             <div className="text-[21px] font-bold leading-tight text-ink">{dShort(g.hotDistrict.district)}</div>
@@ -277,8 +318,12 @@ export default function BentoHome({
       {/* Freehold premium */}
       <Tile onClick={() => onOpen("tenure")} color={C.clay} locked={trial}>
         <TileLabel color={C.clay}>Freehold premium</TileLabel>
-        {trial || g?.fhPremiumPct == null ? (
+        {trial ? (
           <LockedBody label="What freehold really costs" />
+        ) : !g ? (
+          <LoadingBody />
+        ) : g.fhPremiumPct == null ? (
+          <ThinDataBody label="Not enough recent caveats" />
         ) : (
           <div className="mt-1">
             <div className="text-[21px] font-bold leading-tight text-ink">
@@ -293,8 +338,12 @@ export default function BentoHome({
       {/* Launch premium */}
       <Tile onClick={() => onOpen("premium")} color={C.plum} locked={trial}>
         <TileLabel color={C.plum}>New launch premium</TileLabel>
-        {trial || g?.launchPremiumPct == null ? (
+        {trial ? (
           <LockedBody label="New sale vs resale gap" />
+        ) : !g ? (
+          <LoadingBody />
+        ) : g.launchPremiumPct == null ? (
+          <ThinDataBody label="Not enough recent caveats" />
         ) : (
           <div className="mt-1">
             <div className="text-[21px] font-bold leading-tight text-ink">
