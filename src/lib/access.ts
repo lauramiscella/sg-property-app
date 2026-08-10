@@ -8,7 +8,7 @@
 // If ACCESS_CODE is NOT set, the app is fully open for everyone — so a fresh
 // deployment never locks the owner out.
 import { cookies } from "next/headers";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { Dataset } from "./types";
 import { getDataset } from "./store";
 
@@ -31,7 +31,11 @@ export function tokenFor(code: string): string {
 export function checkCode(input: string): "ok" | "wrong" | "open" {
   const code = configuredCode();
   if (!code) return "open"; // no code configured — nothing to unlock
-  return input.trim().toLowerCase() === code.toLowerCase() ? "ok" : "wrong";
+  // Timing-safe comparison over HMACs (tokenFor normalizes case/whitespace),
+  // so response time never leaks how close a guess was.
+  const a = Buffer.from(tokenFor(input), "hex");
+  const b = Buffer.from(tokenFor(code), "hex");
+  return timingSafeEqual(a, b) ? "ok" : "wrong";
 }
 
 export function cookieSettings() {

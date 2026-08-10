@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { limited } from "@/lib/ratelimit";
 import { getAccessDataset } from "@/lib/access";
 import { psfTrends, districtMomentum, tenurePremium, newVsResale } from "@/lib/analysis";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 // One small payload powering the home-screen gadget tiles. Access-aware:
 // trial visitors get the free gadgets computed on their 12-month slice, and
 // null (→ locked tile) for the full-version ones.
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = limited(req, "data");
+  if (rl) return rl;
   const ds = await getAccessDataset();
   const maxMonth = ds.transactionMonths?.max;
 

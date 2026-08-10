@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { limited } from "@/lib/ratelimit";
 import { getAccessDataset } from "@/lib/access";
 import { budgetExplorer, BudgetResult } from "@/lib/analysis";
 export const dynamic = "force-dynamic";
@@ -19,10 +20,12 @@ function trialBucket(b: BudgetResult) {
 }
 
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "data");
+  if (rl) return rl;
   const sp = req.nextUrl.searchParams;
   const ds = await getAccessDataset();
-  const min = Number(sp.get("min") || 0);
-  const max = Number(sp.get("max") || 0);
+  const min = Math.min(1e9, Math.max(0, Number(sp.get("min") || 0) || 0));
+  const max = Math.min(1e9, Math.max(0, Number(sp.get("max") || 0) || 0));
   const types = sp.get("types")?.split("|").filter(Boolean);
   const windowMonths = ds.full ? 24 : 12; // trial slice only holds 12 months
   const opts = { months: windowMonths, maxMonth: ds.transactionMonths?.max ?? undefined, propertyTypes: types };

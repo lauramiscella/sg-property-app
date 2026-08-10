@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { limited } from "@/lib/ratelimit";
 import { getAccessDataset } from "@/lib/access";
 import { applyFilters, valuationCheck } from "@/lib/analysis";
 import { parseFilter } from "@/lib/params";
@@ -6,13 +7,15 @@ import { parseFilter } from "@/lib/params";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "data");
+  if (rl) return rl;
   const sp = req.nextUrl.searchParams;
   const ds = await getAccessDataset();
   if (!ds.full) return NextResponse.json({ locked: true }, { status: 403 }); // full version only
   const filtered = applyFilters(ds.txns, parseFilter(sp));
-  const sqft = Number(sp.get("sqft") || 0);
-  const price = Number(sp.get("price") || 0);
-  const months = Number(sp.get("months") || 24);
+  const sqft = Math.min(100_000, Math.max(0, Number(sp.get("sqft") || 0) || 0));
+  const price = Math.min(1e9, Math.max(0, Number(sp.get("price") || 0) || 0));
+  const months = Math.min(120, Math.max(1, Number(sp.get("months") || 24) || 24));
   return NextResponse.json(
     valuationCheck(filtered, {
       sqft,
